@@ -115,7 +115,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       </nav>
 
       {/* MOBILE 'MORE' MENU (Slide up drawer) */}
-      <div className={`mobile-more-drawer ${showMoreMenu ? 'open' : ''}`}>
+      <div className={`mobile-more-drawer mobile-only ${showMoreMenu ? 'open' : ''}`}>
         <div className="drawer-header">
           <h3>Más Opciones</h3>
           <button onClick={() => setShowMoreMenu(false)}><X size={24} /></button>
@@ -141,7 +141,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       </div>
       
       {/* Overlay for Drawer */}
-      {showMoreMenu && <div className="drawer-overlay" onClick={() => setShowMoreMenu(false)}></div>}
+      {showMoreMenu && <div className="drawer-overlay mobile-only" onClick={() => setShowMoreMenu(false)}></div>}
     </>
   );
 };
