@@ -1,0 +1,127 @@
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Hide EVERYTHING else in the body */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Reset margins and background for print */
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Make print-only visible and position it at the top */
+  .print-only, .print-only * {
+    visibility: visible;
+  }
+  
+  .print-only {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Specific styles for the printed document */
+  .print-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: Arial, sans-serif;
+    color: #000;
+  }
+
+  .print-header {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+  }
+
+  .print-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-right: 20px;
+  }
+
+  .print-header-text h2 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    text-transform: uppercase;
+  }
+
+  .print-header-text p {
+    margin: 3px 0;
+    font-size: 14px;
+  }
+
+  .print-title {
+    text-align: center;
+    font-size: 18px;
+    text-decoration: underline;
+    margin-bottom: 40px;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 40px;
+  }
+
+  .print-table td {
+    padding: 12px 10px;
+    border: 1px solid #000;
+    font-size: 14px;
+  }
+
+  .print-label {
+    width: 35%;
+    background-color: #f0f0f0; /* Many browsers strip background colors on print unless configured, but we add it anyway */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-weight: bold;
+  }
+
+  .print-date {
+    text-align: right;
+    margin-bottom: 60px;
+    font-size: 14px;
+  }
+
+  .print-signatures {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 50px;
+  }
+
+  .signature-box {
+    text-align: center;
+    width: 40%;
+  }
+
+  .signature-line {
+    border-bottom: 1px solid #000;
+    margin-bottom: 10px;
+    height: 40px;
+  }
+
+  .signature-box p {
+    margin: 5px 0;
+    font-size: 14px;
+  }
+
+  .fw-bold {
+    font-weight: bold;
+  }
+}

@@ -1,0 +1,88 @@
+.alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.alert-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 300px;
+  max-width: 400px;
+  pointer-events: auto;
+  animation: slideIn 0.3s ease-out;
+  background: white;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.alert-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.alert-message {
+  flex: 1;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #333;
+}
+
+.alert-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.alert-close:hover {
+  background: rgba(0,0,0,0.05);
+  color: #333;
+}
+
+/* Tipos */
+.alert-error {
+  border-left: 5px solid var(--color-error);
+}
+.alert-error .alert-icon {
+  color: var(--color-error);
+}
+
+.alert-success {
+  border-left: 5px solid var(--color-success);
+}
+.alert-success .alert-icon {
+  color: var(--color-success);
+}
+
+.alert-warning {
+  border-left: 5px solid var(--color-warning);
+}
+.alert-warning .alert-icon {
+  color: var(--color-warning);
+}
+
+.alert-info {
+  border-left: 5px solid var(--color-primary);
+}
+.alert-info .alert-icon {
+  color: var(--color-primary);
+}

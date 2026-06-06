@@ -1,0 +1,22 @@
+.acuerdo-form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.acuerdo-form .form-section {
+  background: var(--color-background);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .acuerdo-form .form-section {
+    padding: 1rem;
+  }
+}

@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regla base: Ningún acceso si no está autenticado
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Si en un futuro necesitas reglas más granulares, puedes definirlas así:
+    // match /configuracion/{docId} {
+    //   allow read: if request.auth != null;
+    //   allow write: if request.auth.uid == 'UID_DEL_DIRECTOR';
+    // }
+  }
+}

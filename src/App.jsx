@@ -1,0 +1,56 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ConfigProvider } from './contexts/ConfigContext';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
+import DashboardLayout from './components/Layout/DashboardLayout';
+
+// Pages
+import Login from './pages/Auth/Login';
+import Dashboard from './pages/Dashboard/Dashboard';
+import Agenda from './pages/Agenda/Agenda';
+import PEMC from './pages/PEMC/PEMC';
+import AcuerdosCTE from './pages/AcuerdosCTE/AcuerdosCTE';
+import Repositorio from './pages/Repositorio/Repositorio';
+import Permisos from './pages/Permisos/Permisos';
+import Bandeja from './pages/Bandeja/Bandeja';
+import Reportes from './pages/Reportes/Reportes';
+import Configuracion from './pages/Configuracion/Configuracion';
+import { AlertProvider } from './contexts/AlertContext';
+
+function App() {
+  return (
+    <AuthProvider>
+      <AlertProvider>
+        <ConfigProvider>
+          <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="agenda" element={<Agenda />} />
+              <Route path="pemc" element={<PEMC />} />
+              <Route path="acuerdos" element={<AcuerdosCTE />} />
+              <Route path="repositorio" element={<Repositorio />} />
+              <Route path="permisos" element={<Permisos />} />
+              <Route path="bandeja" element={<Bandeja />} />
+              <Route path="reportes" element={<Reportes />} />
+              <Route path="configuracion" element={<Configuracion />} />
+            </Route>
+          </Routes>
+        </Router>
+      </ConfigProvider>
+    </AlertProvider>
+  </AuthProvider>
+);
+}
+
+export default App;

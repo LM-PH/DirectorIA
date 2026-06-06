@@ -1,0 +1,104 @@
+.doc-form {
+  padding: 1.5rem;
+}
+
+.form-layout {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Drag and Drop Zone */
+.drag-drop-zone {
+  flex: 1;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 250px;
+}
+
+.drag-drop-zone:hover {
+  background: #F8FAFC;
+  border-color: var(--color-primary-light);
+}
+
+.drag-drop-zone.active {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: var(--color-accent);
+}
+
+.drag-drop-zone.has-file {
+  border-style: solid;
+  border-color: var(--color-primary);
+  background: #F8FAFC;
+}
+
+.upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-prompt p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 1.1rem;
+}
+
+.upload-prompt span {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-name {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+.file-size {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.change-text {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--color-primary-light);
+  text-decoration: underline;
+}
+
+@media (max-width: 992px) {
+  .form-layout {
+    grid-template-columns: 1fr;
+  }
+  .drag-drop-zone {
+    min-height: 200px;
+  }
+}

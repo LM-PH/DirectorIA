@@ -1,0 +1,147 @@
+.print-report-wrapper {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-only, .print-only * {
+    visibility: visible;
+  }
+  
+  .print-only {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    color: #000;
+  }
+
+  /* Header */
+  .print-header {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+  }
+
+  .print-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin-right: 20px;
+  }
+  
+  .print-logo-placeholder {
+    width: 80px;
+    height: 80px;
+    background: #eee;
+    margin-right: 20px;
+  }
+
+  .print-header-text h2 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    text-transform: uppercase;
+  }
+
+  .print-header-text p {
+    margin: 3px 0;
+    font-size: 12px;
+  }
+
+  /* Title */
+  .print-report-title {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .print-report-title h1 {
+    font-size: 20px;
+    margin: 0 0 5px 0;
+    text-decoration: underline;
+  }
+
+  .print-subtitle {
+    font-size: 14px;
+    color: #444;
+    margin: 0;
+  }
+
+  /* Body Elements */
+  .print-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    font-size: 12px;
+  }
+
+  .print-body th, 
+  .print-body td {
+    padding: 8px;
+    border: 1px solid #000;
+    text-align: left;
+  }
+
+  .print-body th {
+    background-color: #f1f5f9;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  
+  .print-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border: 1px solid #000;
+  }
+
+  /* Footer */
+  .print-footer {
+    margin-top: 50px;
+    text-align: center;
+    font-size: 12px;
+    page-break-inside: avoid;
+  }
+
+  .print-signature-area {
+    margin-top: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .signature-line {
+    width: 250px;
+    border-bottom: 1px solid #000;
+    margin-bottom: 10px;
+  }
+
+  .fw-bold {
+    font-weight: bold;
+  }
+}

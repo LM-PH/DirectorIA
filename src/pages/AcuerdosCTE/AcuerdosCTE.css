@@ -1,0 +1,226 @@
+.cte-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+/* KPI Cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.kpi-label {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* Color Utilities for Statuses */
+.bg-info-light { background-color: rgba(59, 130, 246, 0.1); }
+.text-info { color: #2563EB; }
+.badge-info { background-color: rgba(59, 130, 246, 0.1); color: #1D4ED8; }
+.bg-info { background-color: #3B82F6; }
+
+.bg-warning-light { background-color: rgba(245, 158, 11, 0.1); }
+.text-warning { color: #D97706; }
+.badge-warning { background-color: rgba(245, 158, 11, 0.1); color: #B45309; }
+.bg-warning { background-color: #F59E0B; }
+
+.bg-error-light { background-color: rgba(239, 68, 68, 0.1); }
+.text-error { color: #DC2626; }
+.badge-error { background-color: rgba(239, 68, 68, 0.1); color: #B91C1C; }
+.bg-error { background-color: #EF4444; }
+
+.bg-success-light { background-color: rgba(16, 185, 129, 0.1); }
+.text-success { color: #059669; }
+.badge-success { background-color: rgba(16, 185, 129, 0.1); color: #047857; }
+.bg-success { background-color: #10B981; }
+
+.badge-neutral { background-color: #F1F5F9; color: #475569; }
+.bg-neutral { background-color: #94A3B8; }
+
+.fw-bold { font-weight: 700; }
+
+/* Filters Bar */
+.filters-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+}
+
+.filters-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filters-grid select {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  min-width: 180px;
+  flex: 1;
+}
+
+.btn-clear {
+  padding: 0.5rem 1rem;
+  white-space: nowrap;
+}
+
+/* List */
+.acuerdos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.acuerdo-card {
+  display: flex;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s;
+}
+
+.acuerdo-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.acuerdo-status-bar {
+  width: 6px;
+  flex-shrink: 0;
+}
+
+.acuerdo-content {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.acuerdo-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.acuerdo-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sesion-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-background);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+}
+
+.acuerdo-text {
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.acuerdo-text p {
+  margin: 0;
+}
+
+.acuerdo-footer-row {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.9rem;
+}
+
+.footer-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.footer-item strong {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .cte-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .acuerdo-footer-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
