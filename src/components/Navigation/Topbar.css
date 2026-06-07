@@ -56,6 +56,8 @@
 @media (max-width: 768px) {
   .topbar {
     padding: 0 1.5rem;
+    padding-top: env(safe-area-inset-top);
+    height: calc(70px + env(safe-area-inset-top));
   }
   
   .user-greeting {

@@ -75,6 +75,9 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+  /* Prevent tap highlight color on mobile */
+  -webkit-tap-highlight-color: transparent;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -311,9 +314,28 @@ input, select, textarea {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Scrollbars (Webkit) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background); 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary); 
+}
+
 @media (max-width: 768px) {
   .page-container {
     padding: 1rem;
-    padding-bottom: 80px; /* Space for bottom nav */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    /* Smooth scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
   }
 }
+
