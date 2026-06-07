@@ -2,28 +2,26 @@
 
 :root {
   /* Institutional Modern Colors */
-  /* Brand Colors */
-  --color-primary: #2563eb;    /* Blue 600 */
-  --color-primary-hover: #1d4ed8;
-  --color-accent: #0ea5e9;     /* Sky 500 */
-  
-  /* Status Colors */
-  --color-success: #10b981;    /* Emerald 500 */
-  --color-success-bg: #d1fae5;
-  --color-warning: #f59e0b;    /* Amber 500 */
-  --color-warning-bg: #fef3c7;
-  --color-error: #ef4444;      /* Red 500 */
-  --color-error-bg: #fee2e2;
-  --color-info: #3b82f6;       /* Blue 500 */
-  --color-info-bg: #dbeafe;
-  
-  /* Text & Background - LIGHT MODE */
-  --color-text-primary: #1e293b;   /* Slate 800 */
-  --color-text-secondary: #64748b; /* Slate 500 */
-  --color-text-inverse: #ffffff;
-  --color-background: #f8fafc;     /* Slate 50 */
+  --color-primary: #0f172a; /* Slate 900 - Deep, professional */
+  --color-primary-light: #1e293b; /* Slate 800 */
+  --color-accent: #059669; /* Emerald 600 - Success/Action */
+  --color-accent-hover: #047857; /* Emerald 700 */
+  --color-background: #f8fafc; /* Slate 50 - Soft gray bg */
   --color-surface: #ffffff;
-  --color-border: #e2e8f0;         /* Slate 200 */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569; /* Slate 600 */
+  --color-text-inverse: #ffffff;
+  --color-border: #e2e8f0; /* Slate 200 */
+  
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-success-bg: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fef3c7;
+  --color-error: #ef4444;
+  --color-error-bg: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-bg: #dbeafe;
 
   /* Premium Gradients */
   --grad-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
