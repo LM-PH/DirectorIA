@@ -38,25 +38,37 @@ const Reportes = () => {
     setLoading(true);
     try {
       if (reportId === 'permisos') {
-        const snap = await getDocs(query(collection(db, 'permisos'), orderBy('fecha', 'asc')));
-        setReportData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snap = await getDocs(collection(db, 'permisos'));
+        let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a,b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        setReportData(data);
       } else if (reportId === 'cte') {
-        const snap = await getDocs(query(collection(db, 'acuerdos_cte'), orderBy('fechaCompromiso', 'asc')));
-        setReportData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snap = await getDocs(collection(db, 'acuerdos_cte'));
+        let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a,b) => (a.fechaCompromiso || '').localeCompare(b.fechaCompromiso || ''));
+        setReportData(data);
       } else if (reportId === 'pemc') {
-        const snap = await getDocs(query(collection(db, 'pemc'), orderBy('fechaInicio', 'asc')));
-        setReportData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snap = await getDocs(collection(db, 'pemc'));
+        let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a,b) => (a.fechaInicio || '').localeCompare(b.fechaInicio || ''));
+        setReportData(data);
       } else if (reportId === 'documentos') {
-        const snap = await getDocs(query(collection(db, 'documentos'), orderBy('fechaRecepcion', 'asc')));
-        setReportData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snap = await getDocs(collection(db, 'documentos'));
+        let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a,b) => (a.fechaRecepcion || '').localeCompare(b.fechaRecepcion || ''));
+        setReportData(data);
       } else if (reportId === 'agenda') {
-        const snap = await getDocs(query(collection(db, 'agenda'), orderBy('fecha', 'asc')));
-        setReportData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snap = await getDocs(collection(db, 'agenda'));
+        let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+        setReportData(data);
       } else if (reportId === 'entregas') {
-        const snapEntregas = await getDocs(query(collection(db, 'entregas_esperadas'), orderBy('fechaLimite', 'asc')));
-        setReportData(snapEntregas.docs.map(d => ({ id: d.id, ...d.data() })));
+        const snapEntregas = await getDocs(collection(db, 'entregas_esperadas'));
+        let data = snapEntregas.docs.map(d => ({ id: d.id, ...d.data() }));
+        data.sort((a,b) => (a.fechaLimite || '').localeCompare(b.fechaLimite || ''));
+        setReportData(data);
         
-        const snapDocs = await getDocs(query(collection(db, 'documentos')));
+        const snapDocs = await getDocs(collection(db, 'documentos'));
         setExtraData(snapDocs.docs.map(d => ({ id: d.id, ...d.data() })));
       }
     } catch (e) {
