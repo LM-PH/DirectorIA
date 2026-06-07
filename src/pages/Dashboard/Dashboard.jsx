@@ -17,87 +17,132 @@ import './Dashboard.css';
 const Dashboard = () => {
   // State for dashboard data
   const [loading, setLoading] = useState(true);
-  const [summaryData, setSummaryData] = useState(null);
+  const [summaryData, setSummaryData] = useState({
+    eventosHoy: 0,
+    permisosPendientes: 0,
+    acuerdosVencer: 0,
+    documentosRecientes: 0,
+    accionesPEMCAtrasadas: 0,
+    planeacionesPendientes: 0
+  });
   const [activities, setActivities] = useState([]);
 
-  // Mock data loading to simulate Firestore fetch
   useEffect(() => {
-    // TODO: Replace this with actual Firestore listeners
-    // import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-    // import { db } from '../../config/firebase';
-    
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      
-      // Simulating network request
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setSummaryData({
-        eventosHoy: 2,
-        permisosPendientes: 3,
-        acuerdosVencer: 1,
-        documentosRecientes: 5,
-        accionesPEMCAtrasadas: 2,
-        planeacionesPendientes: 4
-      });
+    import('firebase/firestore').then(({ collection, getDocs }) => {
+      const { db } = require('../../config/firebase');
 
-      setActivities([
-        {
-          id: '1',
-          type: 'documento',
-          title: 'Nuevo oficio recibido',
-          description: 'Oficio circular de supervisión escolar No. 045/2026',
-          time: 'Hace 30 minutos',
-          module: 'Repositorio',
-          icon: <FileText size={18} />,
-          colorClass: 'bg-info'
-        },
-        {
-          id: '2',
-          type: 'permiso',
-          title: 'Solicitud de permiso económico',
-          description: 'Prof. Juan Pérez - Ausencia por motivos personales (2 días)',
-          time: 'Hace 2 horas',
-          module: 'Permisos',
-          icon: <Clock size={18} />,
-          colorClass: 'bg-warning'
-        },
-        {
-          id: '3',
-          type: 'pemc',
-          title: 'Meta de PEMC actualizada',
-          description: 'Ámbito: Aprovechamiento académico. Avance registrado: 80%',
-          time: 'Ayer, 14:30',
-          module: 'PEMC',
-          icon: <CheckCircle2 size={18} />,
-          colorClass: 'bg-success'
-        },
-        {
-          id: '4',
-          type: 'acuerdo',
-          title: 'Acuerdo de CTE próximo a vencer',
-          description: 'Entrega de diagnósticos grupales (Vence mañana)',
-          time: 'Ayer, 10:15',
-          module: 'Acuerdos CTE',
-          icon: <AlertTriangle size={18} />,
-          colorClass: 'bg-danger'
-        },
-        {
-          id: '5',
-          type: 'planeacion',
-          title: 'Planeación entregada',
-          description: 'Profa. María González (3° "A") - Bloque II',
-          time: 'Hace 2 días',
-          module: 'Planeaciones',
-          icon: <BookOpen size={18} />,
-          colorClass: 'bg-primary'
+      const fetchDashboardData = async () => {
+        try {
+          // Fetch collections
+          const [agendaSnap, permisosSnap, acuerdosSnap, docsSnap, pemcSnap, entregasSnap] = await Promise.all([
+            getDocs(collection(db, 'agenda')),
+            getDocs(collection(db, 'permisos')),
+            getDocs(collection(db, 'acuerdos_cte')),
+            getDocs(collection(db, 'documentos')),
+            getDocs(collection(db, 'pemc')),
+            getDocs(collection(db, 'entregas_esperadas'))
+          ]);
+
+          const todayDate = new Date();
+          todayDate.setHours(0,0,0,0);
+          const todayStr = todayDate.toISOString().split('T')[0];
+
+          // 1. Eventos Hoy
+          const eventosHoy = agendaSnap.docs.filter(doc => doc.data().date === todayStr).length;
+
+          // 2. Permisos Pendientes
+          const permisosPendientes = permisosSnap.docs.filter(doc => doc.data().estado === 'pendiente').length;
+
+          // 3. Acuerdos a vencer (no cumplidos y vencen en los próximos 3 días o ya están atrasados)
+          let acuerdosVencer = 0;
+          acuerdosSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.estado !== 'cumplido') {
+              const compDate = new Date(data.fechaCompromiso + 'T12:00:00');
+              const diffDays = Math.ceil((compDate - todayDate) / (1000 * 60 * 60 * 24));
+              if (diffDays <= 3) acuerdosVencer++;
+            }
+          });
+
+          // 4. Documentos (todos o recientes)
+          const documentosRecientes = docsSnap.size;
+
+          // 5. Acciones PEMC Atrasadas
+          let accionesPEMCAtrasadas = 0;
+          pemcSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.estado !== 'completado') {
+              const compDate = new Date(data.fechaTermino + 'T12:00:00');
+              if (compDate < todayDate) accionesPEMCAtrasadas++;
+            }
+          });
+
+          // 6. Entregas (Planeaciones u otras)
+          const planeacionesPendientes = entregasSnap.size; // Simplificado por ahora
+
+          setSummaryData({
+            eventosHoy,
+            permisosPendientes,
+            acuerdosVencer,
+            documentosRecientes,
+            accionesPEMCAtrasadas,
+            planeacionesPendientes
+          });
+
+          // Construir Actividad Reciente combinando los más nuevos
+          const allActivities = [];
+
+          // Documentos recientes
+          docsSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.createdAt) {
+              allActivities.push({
+                id: `doc-${doc.id}`,
+                type: 'documento',
+                title: 'Nuevo documento recibido',
+                description: `${data.tipo}: ${data.nombre} (${data.docente})`,
+                timestamp: data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+                module: 'Repositorio',
+                icon: <FileText size={18} />,
+                colorClass: 'bg-info'
+              });
+            }
+          });
+
+          // Permisos recientes
+          permisosSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.createdAt) {
+              allActivities.push({
+                id: `perm-${doc.id}`,
+                type: 'permiso',
+                title: `Permiso ${data.estado}`,
+                description: `${data.trabajador} - ${data.motivo}`,
+                timestamp: data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+                module: 'Permisos',
+                icon: <Clock size={18} />,
+                colorClass: data.estado === 'pendiente' ? 'bg-warning' : (data.estado === 'autorizado' ? 'bg-success' : 'bg-danger')
+              });
+            }
+          });
+
+          // Sort by timestamp desc and take top 5
+          allActivities.sort((a, b) => b.timestamp - a.timestamp);
+          const topActivities = allActivities.slice(0, 5).map(act => ({
+            ...act,
+            time: act.timestamp.toLocaleDateString() + ' ' + act.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+          }));
+
+          setActivities(topActivities);
+          setLoading(false);
+        } catch (error) {
+          console.error("Error fetching dashboard data:", error);
+          setLoading(false);
         }
-      ]);
-      
-      setLoading(false);
-    };
+      };
 
-    fetchDashboardData();
+      fetchDashboardData();
+    });
   }, []);
 
   const today = new Date().toLocaleDateString('es-MX', { 
@@ -110,7 +155,10 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <RefreshCw size={32} className="text-info" style={{ animation: 'spin 1s linear infinite' }} />
+        <div style={{textAlign: 'center', color: 'var(--color-text-secondary)'}}>
+          <RefreshCw size={32} className="text-info" style={{ animation: 'spin 1s linear infinite', marginBottom: '1rem' }} />
+          <p>Conectando con la base de datos...</p>
+        </div>
       </div>
     );
   }
