@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { uploadToCloudinary } from '../../../services/cloudinary';
 import { X, Calendar, User, Clock, FileText, Briefcase, Paperclip, AlertCircle } from 'lucide-react';
 import './PermisoModal.css';
 
@@ -76,9 +75,8 @@ const PermisoModal = ({ isOpen, onClose, onSave, permisoToEdit }) => {
 
       // Subir archivo si hay uno nuevo
       if (archivo) {
-        const fileRef = ref(storage, `schools/${schoolId}/permisos/${Date.now()}_${archivo.name}`);
-        const snapshot = await uploadBytes(fileRef, archivo);
-        finalUrl = await getDownloadURL(snapshot.ref);
+        const res = await uploadToCloudinary(archivo, `schools/${schoolId}/permisos`);
+        finalUrl = res.url;
         finalNombre = archivo.name;
       }
 

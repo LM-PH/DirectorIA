@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { db } from '../../config/firebase';
 import { useConfig } from '../../contexts/ConfigContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { uploadToCloudinary } from '../../services/cloudinary';
 import { Save, Upload, School, Image as ImageIcon, AlertCircle, Link, Copy, Check, Share2 } from 'lucide-react';
 import './Configuracion.css';
 
@@ -93,9 +93,8 @@ const Configuracion = () => {
 
       // If there's a new file, upload it first
       if (logoFile && logoPreview !== config?.logoUrl) {
-        const logoRef = ref(storage, `schools/${schoolId}/logos/logo_escuela_${Date.now()}`);
-        const snapshot = await uploadBytes(logoRef, logoFile);
-        finalLogoUrl = await getDownloadURL(snapshot.ref);
+        const res = await uploadToCloudinary(logoFile, `schools/${schoolId}/logos`);
+        finalLogoUrl = res.url;
       }
 
       // Save all data to Firestore

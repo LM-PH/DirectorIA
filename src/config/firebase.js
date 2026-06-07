@@ -1,10 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
-// TODO: Replace with your actual Firebase config
-// Ensure you have these variables in your .env file
+// Configuración de Firebase para base de datos y autenticación (Spark plan - 100% Gratuito)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-api-key",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "demo-project.firebaseapp.com",
@@ -14,16 +12,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789:web:abcdef"
 };
 
-// Initialize Firebase
+// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
+// Inicializar y exportar servicios activos
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
-
-// ⚡ Evitar que las subidas de archivos se queden congeladas indefinidamente por problemas de CORS o red
-storage.maxUploadRetryTime = 8000; // 8 segundos máximo para reintentos de subidas
-storage.maxOperationRetryTime = 8000; // 8 segundos máximo para otras operaciones
 
 export default app;

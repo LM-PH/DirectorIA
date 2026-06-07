@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { db } from '../../config/firebase';
+import { uploadToCloudinary } from '../../services/cloudinary';
 import { 
   Briefcase, FileText, Send, CheckCircle, 
   ChevronLeft, BookOpen, AlertCircle, Layers, CheckSquare 
@@ -51,14 +51,9 @@ const PortalDocente = () => {
 
       // Si el docente adjuntó un archivo físico (PDF, Word, etc.)
       if (archivo) {
-        const cleanName = archivo.name.replace(/[^a-zA-Z0-9.]/g, '_');
-        // Se sube a la carpeta pública especial configurada en las storage.rules
-        const fileRef = ref(storage, `schools/${schoolId}/public_uploads/${Date.now()}_${cleanName}`);
-        const snapshot = await uploadBytes(fileRef, archivo);
-        const urlSubida = await getDownloadURL(snapshot.ref);
-        
+        const res = await uploadToCloudinary(archivo, `schools/${schoolId}/public_uploads`);
         adjuntos.push({
-          url: urlSubida,
+          url: res.url,
           nombre: archivo.name,
           tipo: 'file'
         });
