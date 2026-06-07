@@ -2,26 +2,28 @@
 
 :root {
   /* Institutional Modern Colors */
-  --color-primary: #0f172a; /* Slate 900 - Deep, professional */
-  --color-primary-light: #1e293b; /* Slate 800 */
-  --color-accent: #059669; /* Emerald 600 - Success/Action */
-  --color-accent-hover: #047857; /* Emerald 700 */
-  --color-background: #f8fafc; /* Slate 50 - Soft gray bg */
-  --color-surface: #ffffff;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569; /* Slate 600 */
-  --color-text-inverse: #ffffff;
-  --color-border: #e2e8f0; /* Slate 200 */
+  /* Brand Colors */
+  --color-primary: #2563eb;    /* Blue 600 */
+  --color-primary-hover: #1d4ed8;
+  --color-accent: #0ea5e9;     /* Sky 500 */
   
-  /* Semantic Colors */
-  --color-success: #10b981;
+  /* Status Colors */
+  --color-success: #10b981;    /* Emerald 500 */
   --color-success-bg: #d1fae5;
-  --color-warning: #f59e0b;
+  --color-warning: #f59e0b;    /* Amber 500 */
   --color-warning-bg: #fef3c7;
-  --color-error: #ef4444;
+  --color-error: #ef4444;      /* Red 500 */
   --color-error-bg: #fee2e2;
-  --color-info: #3b82f6;
+  --color-info: #3b82f6;       /* Blue 500 */
   --color-info-bg: #dbeafe;
+  
+  /* Text & Background - LIGHT MODE */
+  --color-text-primary: #1e293b;   /* Slate 800 */
+  --color-text-secondary: #64748b; /* Slate 500 */
+  --color-text-inverse: #ffffff;
+  --color-background: #f8fafc;     /* Slate 50 */
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;         /* Slate 200 */
 
   /* Premium Gradients */
   --grad-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -30,19 +32,34 @@
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   
-  /* Modern Shadows */
+  /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-glow: 0 0 15px rgba(16, 185, 129, 0.3);
   
-  /* Radius */
+  /* Spacing & Radii */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
+}
+
+/* DARK MODE SUPPORT */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-primary: #f8fafc;   /* White text */
+    --color-text-secondary: #94a3b8; /* Light slate text */
+    --color-background: #0f172a;     /* Very dark blue/slate */
+    --color-surface: #1e293b;        /* Dark slate card bg */
+    --color-border: #334155;         /* Dark border */
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  }
 }
 
 * {
