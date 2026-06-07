@@ -134,8 +134,10 @@ const Reportes = () => {
                 style={{ '--highlight': rt.color }}
               >
                 <div className="report-icon" style={{color: rt.color}}>{rt.icon}</div>
-                <h3>{rt.title}</h3>
-                <p>{rt.desc}</p>
+                <div className="report-card-content">
+                  <h3>{rt.title}</h3>
+                  <p>{rt.desc}</p>
+                </div>
               </div>
             ))}
           </div>
