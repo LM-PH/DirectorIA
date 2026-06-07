@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, FolderKanban, FileText, CheckCircle, CheckSquare, Users } from 'lucide-react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
 import '../../Repositorio/components/DocumentoModal.css';
 
 const TIPOS_DOC = [
@@ -10,6 +11,7 @@ const TIPOS_DOC = [
 ];
 
 const ClasificarModal = ({ isOpen, onClose, onSave, correo }) => {
+  const { schoolId } = useAuth();
   const [moduloDestino, setModuloDestino] = useState('Repositorio');
   const [clasificacion, setClasificacion] = useState('');
   const [targetId, setTargetId] = useState('');
@@ -36,11 +38,12 @@ const ClasificarModal = ({ isOpen, onClose, onSave, correo }) => {
 
   const cargarListasExtras = async () => {
     try {
-      const qPemc = query(collection(db, 'pemc'), orderBy('fechaInicio', 'desc'));
+      if (!schoolId) return;
+      const qPemc = query(collection(db, 'schools', schoolId, 'pemc'), orderBy('fechaInicio', 'desc'));
       const snapPemc = await getDocs(qPemc);
       setPemcList(snapPemc.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      const qCte = query(collection(db, 'acuerdos_cte'), orderBy('fechaCompromiso', 'desc'));
+      const qCte = query(collection(db, 'schools', schoolId, 'acuerdos_cte'), orderBy('fechaCompromiso', 'desc'));
       const snapCte = await getDocs(qCte);
       setCteList(snapCte.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {

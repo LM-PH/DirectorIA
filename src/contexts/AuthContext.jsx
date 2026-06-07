@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 const AuthContext = createContext({});
@@ -32,6 +32,7 @@ const saveUserProfile = async (user) => {
     await setDoc(ref, {
       fechaRegistro: serverTimestamp(),
       pagado: false,
+      suspendido: false,
       notas: '',
     }, { merge: true });
   } catch (e) {
@@ -43,6 +44,8 @@ const saveUserProfile = async (user) => {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   function login(email, password) {
     return signInWithEmailAndPassword(auth, email, password);
@@ -57,12 +60,15 @@ export const AuthProvider = ({ children }) => {
     return signOut(auth);
   }
 
+  // 1. Escuchar estado de autenticación de Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Registrar/actualizar perfil en la colección de admin
         await saveUserProfile(user);
+      } else {
+        setUserProfile(null);
+        setProfileLoading(false);
       }
       setLoading(false);
     });
@@ -70,18 +76,61 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
+  // 2. Escuchar en tiempo real el perfil del usuario de _admin_users
+  useEffect(() => {
+    if (!currentUser) {
+      setUserProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    const docRef = doc(db, '_admin_users', currentUser.uid);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setUserProfile(docSnap.data());
+      } else {
+        setUserProfile({});
+      }
+      setProfileLoading(false);
+    }, (error) => {
+      console.warn("Could not listen to user profile in _admin_users:", error.message);
+      setProfileLoading(false);
+    });
+
+    return unsubscribe;
+  }, [currentUser]);
+
+  // Lógica de Suscripción y Bloqueo
+  const isSuspended = userProfile?.suspendido === true;
+  const isPaid = userProfile?.pagado === true;
+  const regTime = userProfile?.fechaRegistro?.toDate?.()?.getTime() || Date.now();
+  // 7 días de prueba (7 * 24 * 60 * 60 * 1000 milisegundos)
+  const trialExpired = !isPaid && (Date.now() - regTime) > 7 * 24 * 60 * 60 * 1000;
+  
+  // El super-admin está exento de cualquier bloqueo de pago
+  const isAccessBlocked = currentUser?.email !== ADMIN_EMAIL && (isSuspended || trialExpired);
+
   const value = {
     currentUser,
     schoolId: currentUser?.uid || null,
     isAdmin: currentUser?.email === ADMIN_EMAIL,
+    isPaid,
+    isSuspended,
+    trialExpired,
+    isAccessBlocked,
+    profileLoading,
+    userProfile,
     login,
     loginWithGoogle,
     logout
   };
 
+  const contextLoading = loading || (currentUser && profileLoading);
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {!contextLoading && children}
     </AuthContext.Provider>
   );
 };

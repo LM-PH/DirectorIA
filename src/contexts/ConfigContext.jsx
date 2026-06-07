@@ -21,7 +21,7 @@ export const ConfigProvider = ({ children }) => {
 
     setLoadingConfig(true);
     // Escuchar cambios en tiempo real en la configuración de la escuela
-    const docRef = doc(db, 'configuracion', 'general');
+    const docRef = doc(db, 'schools', currentUser.uid, 'configuracion', 'general');
     
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {

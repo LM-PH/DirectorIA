@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
-import { Briefcase, FileText, Send, CheckCircle, ChevronLeft, BookOpen, AlertCircle } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../config/firebase';
+import { 
+  Briefcase, FileText, Send, CheckCircle, 
+  ChevronLeft, BookOpen, AlertCircle, Layers, CheckSquare 
+} from 'lucide-react';
 import './PortalDocente.css';
 
 const TIPOS_SOLICITUD = [
-  { id: 'permiso', label: 'Permiso Económico', icon: <Briefcase size={28}/>, color: '#3b82f6', desc: 'Ausencia justificada por motivos personales' },
   { id: 'planeacion', label: 'Planeación Didáctica', icon: <BookOpen size={28}/>, color: '#10b981', desc: 'Entrega de planeaciones de clase' },
-  { id: 'documento', label: 'Documento / Oficio', icon: <FileText size={28}/>, color: '#f59e0b', desc: 'Cualquier otro documento oficial' },
+  { id: 'programa_analitico', label: 'Programa Analítico', icon: <Layers size={28}/>, color: '#8b5cf6', desc: 'Entrega de codiseño y programa analítico' },
+  { id: 'reporte', label: 'Reporte de Actividades', icon: <CheckSquare size={28}/>, color: '#ec4899', desc: 'Reporte final o periódico de actividades' },
+  { id: 'permiso', label: 'Permiso Económico', icon: <Briefcase size={28}/>, color: '#3b82f6', desc: 'Ausencia justificada por motivos personales' },
+  { id: 'documento', label: 'Otro Documento / Oficio', icon: <FileText size={28}/>, color: '#f59e0b', desc: 'Cualquier otro documento o comunicación oficial' },
 ];
 
 const PortalDocente = () => {
@@ -16,6 +22,7 @@ const PortalDocente = () => {
   const [step, setStep] = useState('select'); // 'select' | 'form' | 'success' | 'error'
   const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [archivo, setArchivo] = useState(null);
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -40,23 +47,45 @@ const PortalDocente = () => {
     setLoading(true);
 
     try {
+      let adjuntos = [];
+
+      // Si el docente adjuntó un archivo físico (PDF, Word, etc.)
+      if (archivo) {
+        const cleanName = archivo.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        // Se sube a la carpeta pública especial configurada en las storage.rules
+        const fileRef = ref(storage, `schools/${schoolId}/public_uploads/${Date.now()}_${cleanName}`);
+        const snapshot = await uploadBytes(fileRef, archivo);
+        const urlSubida = await getDownloadURL(snapshot.ref);
+        
+        adjuntos.push({
+          url: urlSubida,
+          nombre: archivo.name,
+          tipo: 'file'
+        });
+      }
+
+      // Si también agregó un link externo
+      if (form.linkAdjunto) {
+        adjuntos.push({
+          url: form.linkAdjunto,
+          nombre: 'Enlace externo',
+          tipo: 'link'
+        });
+      }
+
       const payload = {
         remitenteNombre: form.nombre,
         remitenteEmail: form.email,
         fecha: new Date().toISOString(),
-        asunto: tipoSeleccionado.id === 'permiso'
-          ? `Permiso Económico - ${form.nombre}`
-          : tipoSeleccionado.id === 'planeacion'
-          ? `Planeación Didáctica - ${form.nombre}`
-          : `Documento - ${form.nombre}`,
+        asunto: `${tipoSeleccionado.label} - ${form.nombre}`,
         cuerpo: form.descripcion || form.motivo,
         estado: 'pendiente',
         tipoSugerido: tipoSeleccionado.id === 'permiso' ? 'Permisos' : 'Repositorio',
-        adjuntos: form.linkAdjunto ? [{ url: form.linkAdjunto, nombre: 'Documento adjunto', tipo: 'link' }] : [],
+        adjuntos: adjuntos,
         metadatos: {
           tipo: tipoSeleccionado.id,
           fechaSolicitud: form.fecha,
-          motivo: form.motivo,
+          motivo: form.motivo || '',
         },
         source: 'portal_docente',
         createdAt: new Date(),
@@ -106,12 +135,15 @@ const PortalDocente = () => {
         {/* STEP 2: Formulario */}
         {step === 'form' && tipoSeleccionado && (
           <div className="portal-card">
-            <button className="portal-back" onClick={() => setStep('select')}>
-              <ChevronLeft size={18}/> Cambiar tipo
-            </button>
-            <div className="form-tipo-badge" style={{ background: tipoSeleccionado.color }}>
-              {tipoSeleccionado.icon} {tipoSeleccionado.label}
+            <div className="form-header">
+              <button className="portal-back" onClick={() => setStep('select')}>
+                <ChevronLeft size={18}/> Cambiar tipo
+              </button>
+              <div className="form-tipo-badge" style={{ background: tipoSeleccionado.color }}>
+                {tipoSeleccionado.icon} {tipoSeleccionado.label}
+              </div>
             </div>
+
             <form onSubmit={handleSubmit} className="portal-form">
               <div className="form-row">
                 <div className="form-group">
@@ -142,13 +174,28 @@ const PortalDocente = () => {
               </div>
 
               <div className="form-group">
-                <label>Enlace al documento (opcional)</label>
+                <label>Adjuntar Archivo Físico (PDF, Word, Imagen, etc.) [Opcional]</label>
+                <input 
+                  type="file" 
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setArchivo(e.target.files[0]);
+                    }
+                  }}
+                  style={{ background: '#f8fafc', padding: '0.6rem' }}
+                />
+                <small>Puedes adjuntar directamente tu archivo de planeación, reporte o justificante (Máximo 20MB).</small>
+              </div>
+
+              <div className="form-group">
+                <label>O comparte un enlace del documento (Google Drive, Dropbox, etc.)</label>
                 <input name="linkAdjunto" value={form.linkAdjunto} onChange={handleChange} placeholder="https://drive.google.com/... o cualquier enlace"/>
-                <small>Puedes compartir el archivo desde Google Drive, OneDrive, Dropbox, etc.</small>
+                <small>Usa esto si prefieres compartir un enlace externo de tu archivo.</small>
               </div>
 
               <button type="submit" className="portal-submit-btn" disabled={loading}>
-                {loading ? 'Enviando...' : <><Send size={18}/> Enviar al Director</>}
+                {loading ? 'Enviando archivo...' : <><Send size={18}/> Enviar al Director</>}
               </button>
             </form>
           </div>
@@ -162,7 +209,7 @@ const PortalDocente = () => {
             </div>
             <h2>¡Enviado con éxito!</h2>
             <p>Tu {tipoSeleccionado?.label?.toLowerCase()} ha sido entregada al director. Recibirás respuesta pronto.</p>
-            <button className="portal-submit-btn" onClick={() => { setStep('select'); setForm({ nombre:'', email:'', fecha: new Date().toISOString().split('T')[0], motivo:'', descripcion:'', linkAdjunto:'' }); }}>
+            <button className="portal-submit-btn" onClick={() => { setStep('select'); setArchivo(null); setForm({ nombre:'', email:'', fecha: new Date().toISOString().split('T')[0], motivo:'', descripcion:'', linkAdjunto:'' }); }}>
               Enviar otro documento
             </button>
           </div>

@@ -265,6 +265,22 @@
   color: #10b981;
 }
 
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 1rem;
+}
+
+.form-header .portal-back,
+.form-header .form-tipo-badge {
+  margin: 0;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
   .portal-card {

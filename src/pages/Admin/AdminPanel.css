@@ -60,6 +60,12 @@
   margin: 0;
 }
 
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .admin-email-badge {
   background: #1e293b;
   border: 1px solid #334155;
@@ -67,6 +73,23 @@
   font-size: 0.82rem;
   padding: 0.4rem 0.9rem;
   border-radius: 99px;
+}
+
+.admin-btn-back {
+  background: #10b981;
+  color: white;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-btn-back:hover {
+  background: #059669;
+  transform: translateY(-1px);
 }
 
 /* ===== STATS ===== */
@@ -243,6 +266,18 @@
   border: 1px solid #f59e0b40;
 }
 
+.badge-suspendido {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-expired {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
 /* Notes */
 .notes-cell {
   max-width: 200px;
@@ -364,4 +399,55 @@
   .admin-table td:nth-child(4) {
     display: none; /* Ocultar "Último acceso" en mobile */
   }
+}
+
+.toggle-suspend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.85rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.toggle-suspend-btn.suspend {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.toggle-suspend-btn.suspend:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.toggle-suspend-btn.unsuspend {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.toggle-suspend-btn.unsuspend:hover {
+  background: #10b981;
+  color: white;
+}
+
+.row-suspendido {
+  opacity: 0.7;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.row-expired {
+  background: rgba(245, 158, 11, 0.02) !important;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }

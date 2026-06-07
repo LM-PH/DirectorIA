@@ -89,13 +89,13 @@ const Configuracion = () => {
 
       // If there's a new file, upload it first
       if (logoFile) {
-        const logoRef = ref(storage, `logos/logo_escuela_${Date.now()}`);
+        const logoRef = ref(storage, `schools/${schoolId}/logos/logo_escuela_${Date.now()}`);
         const snapshot = await uploadBytes(logoRef, logoFile);
         finalLogoUrl = await getDownloadURL(snapshot.ref);
       }
 
       // Save all data to Firestore
-      const docRef = doc(db, 'configuracion', 'general');
+      const docRef = doc(db, 'schools', schoolId, 'configuracion', 'general');
       await setDoc(docRef, {
         ...formData,
         logoUrl: finalLogoUrl,

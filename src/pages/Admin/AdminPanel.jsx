@@ -5,19 +5,28 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, CheckCircle, Clock, XCircle,
-  Search, RefreshCw, BadgeDollarSign, StickyNote, Shield
+  Search, RefreshCw, BadgeDollarSign, Shield
 } from 'lucide-react';
 import './AdminPanel.css';
 
-const ESTADOS = ['prueba', 'pagado', 'suspendido'];
-
-const estadoBadge = (estado) => {
-  const map = {
-    pagado:    { label: 'Pagado',     cls: 'badge-pagado' },
-    prueba:    { label: 'En Prueba',  cls: 'badge-prueba' },
-    suspendido:{ label: 'Suspendido', cls: 'badge-suspendido' },
-  };
-  return map[estado] || map['prueba'];
+const getDetailedStatus = (user) => {
+  if (user.suspendido) {
+    return { label: '🚫 Suspendido', cls: 'badge-suspendido', isBlocked: true };
+  }
+  if (user.pagado) {
+    return { label: '✅ Pagado', cls: 'badge-pagado', isBlocked: false };
+  }
+  
+  // Calcular días de prueba restantes (7 días de prueba)
+  const regTime = user.fechaRegistro?.toDate?.()?.getTime() || new Date(user.fechaRegistro).getTime() || Date.now();
+  const daysDiff = (Date.now() - regTime) / (1000 * 60 * 60 * 24);
+  
+  if (daysDiff > 7) {
+    return { label: '⏳ Prueba Expirada', cls: 'badge-expired', isBlocked: true };
+  } else {
+    const daysLeft = Math.max(0, Math.ceil(7 - daysDiff));
+    return { label: `⏳ Prueba (${daysLeft}d restantes)`, cls: 'badge-prueba', isBlocked: false };
+  }
 };
 
 const fmt = (ts) => {
@@ -57,9 +66,14 @@ const AdminPanel = () => {
   }, [isAdmin]);
 
   const handleTogglePagado = async (user) => {
-    const nuevoEstado = user.pagado ? 'suspendido' : true;
     await updateDoc(doc(db, '_admin_users', user.id), {
       pagado: !user.pagado,
+    });
+  };
+
+  const handleToggleSuspendido = async (user) => {
+    await updateDoc(doc(db, '_admin_users', user.id), {
+      suspendido: !user.suspendido,
     });
   };
 
@@ -73,8 +87,9 @@ const AdminPanel = () => {
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalPagados = users.filter(u => u.pagado).length;
-  const totalPrueba  = users.filter(u => !u.pagado).length;
+  const totalPagados = users.filter(u => u.pagado && !u.suspendido).length;
+  const totalPrueba  = users.filter(u => !u.pagado && !u.suspendido).length;
+  const totalSuspendidos = users.filter(u => u.suspendido).length;
 
   if (!isAdmin) return null;
 
@@ -90,6 +105,9 @@ const AdminPanel = () => {
           <p>Panel de control exclusivo para el administrador del sistema.</p>
         </div>
         <div className="admin-header-right">
+          <button onClick={() => navigate('/')} className="admin-btn-back">
+            Ir a la App
+          </button>
           <span className="admin-email-badge">{currentUser?.email}</span>
         </div>
       </header>
@@ -107,14 +125,21 @@ const AdminPanel = () => {
           <CheckCircle size={28} />
           <div>
             <span className="stat-num">{totalPagados}</span>
-            <span className="stat-label">Pagaron</span>
+            <span className="stat-label">Activos / Pagaron</span>
           </div>
         </div>
         <div className="stat-card prueba">
           <Clock size={28} />
           <div>
             <span className="stat-num">{totalPrueba}</span>
-            <span className="stat-label">Sin pago</span>
+            <span className="stat-label">Prueba activa</span>
+          </div>
+        </div>
+        <div className="stat-card suspendido" style={{ borderLeft: '4px solid #ef4444' }}>
+          <XCircle size={28} style={{ color: '#ef4444' }} />
+          <div>
+            <span className="stat-num">{totalSuspendidos}</span>
+            <span className="stat-label">Suspendidos</span>
           </div>
         </div>
       </div>
@@ -144,9 +169,9 @@ const AdminPanel = () => {
                 <th>Correo</th>
                 <th>Registro</th>
                 <th>Último acceso</th>
-                <th>Estado de pago</th>
+                <th>Estado</th>
                 <th>Notas</th>
-                <th>Acción</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -156,65 +181,86 @@ const AdminPanel = () => {
                     No hay directores registrados aún.
                   </td>
                 </tr>
-              ) : filtered.map(u => (
-                <tr key={u.id} className={u.pagado ? 'row-pagado' : ''}>
-                  {/* Avatar + Nombre */}
-                  <td>
-                    <div className="user-cell">
-                      {u.fotoUrl
-                        ? <img src={u.fotoUrl} alt="" className="user-avatar" />
-                        : <div className="user-avatar-initials">{(u.nombre || u.email || '?').charAt(0).toUpperCase()}</div>
-                      }
-                      <span>{u.nombre || '—'}</span>
-                    </div>
-                  </td>
-                  <td className="email-cell">{u.email}</td>
-                  <td>{fmt(u.fechaRegistro)}</td>
-                  <td>{fmt(u.ultimoAcceso)}</td>
-
-                  {/* Estado */}
-                  <td>
-                    <span className={`estado-badge ${u.pagado ? 'badge-pagado' : 'badge-prueba'}`}>
-                      {u.pagado ? '✅ Pagado' : '⏳ Sin pago'}
-                    </span>
-                  </td>
-
-                  {/* Notas */}
-                  <td className="notes-cell">
-                    {editingNote === u.id ? (
-                      <div className="note-edit">
-                        <input
-                          autoFocus
-                          value={noteTemp}
-                          onChange={e => setNoteTemp(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handleSaveNote(u.id)}
-                          placeholder="Ej. Pagó 15 jun, cobrar jul..."
-                        />
-                        <button className="note-save" onClick={() => handleSaveNote(u.id)}>✓</button>
-                        <button className="note-cancel" onClick={() => setEditingNote(null)}>✕</button>
+              ) : filtered.map(u => {
+                const status = getDetailedStatus(u);
+                const rowCls = u.suspendido 
+                  ? 'row-suspendido' 
+                  : status.label === '⏳ Prueba Expirada' 
+                  ? 'row-expired' 
+                  : u.pagado 
+                  ? 'row-pagado' 
+                  : '';
+                return (
+                  <tr key={u.id} className={rowCls}>
+                    {/* Avatar + Nombre */}
+                    <td>
+                      <div className="user-cell">
+                        {u.fotoUrl
+                          ? <img src={u.fotoUrl} alt="" className="user-avatar" />
+                          : <div className="user-avatar-initials">{(u.nombre || u.email || '?').charAt(0).toUpperCase()}</div>
+                        }
+                        <span>{u.nombre || '—'}</span>
                       </div>
-                    ) : (
-                      <span
-                        className="note-text"
-                        onClick={() => { setEditingNote(u.id); setNoteTemp(u.notas || ''); }}
-                        title="Clic para editar nota"
-                      >
-                        {u.notas || <em style={{color:'#94a3b8'}}>+ agregar nota</em>}
-                      </span>
-                    )}
-                  </td>
+                    </td>
+                    <td className="email-cell">{u.email}</td>
+                    <td>{fmt(u.fechaRegistro)}</td>
+                    <td>{fmt(u.ultimoAcceso)}</td>
 
-                  {/* Acción */}
-                  <td>
-                    <button
-                      className={`toggle-paid-btn ${u.pagado ? 'unpay' : 'pay'}`}
-                      onClick={() => handleTogglePagado(u)}
-                    >
-                      {u.pagado ? <><XCircle size={14}/> Desmarcar</> : <><BadgeDollarSign size={14}/> Marcar pagado</>}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    {/* Estado */}
+                    <td>
+                      <span className={`estado-badge ${status.cls}`}>
+                        {status.label}
+                      </span>
+                    </td>
+
+                    {/* Notas */}
+                    <td className="notes-cell">
+                      {editingNote === u.id ? (
+                        <div className="note-edit">
+                          <input
+                            autoFocus
+                            value={noteTemp}
+                            onChange={e => setNoteTemp(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveNote(u.id)}
+                            placeholder="Ej. Pagó 15 jun, cobrar jul..."
+                          />
+                          <button className="note-save" onClick={() => handleSaveNote(u.id)}>✓</button>
+                          <button className="note-cancel" onClick={() => setEditingNote(null)}>✕</button>
+                        </div>
+                      ) : (
+                        <span
+                          className="note-text"
+                          onClick={() => { setEditingNote(u.id); setNoteTemp(u.notas || ''); }}
+                          title="Clic para editar nota"
+                        >
+                          {u.notas || <em style={{color:'#94a3b8'}}>+ agregar nota</em>}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Acción */}
+                    <td>
+                      <div className="actions-cell">
+                        <button
+                          className={`toggle-paid-btn ${u.pagado ? 'unpay' : 'pay'}`}
+                          onClick={() => handleTogglePagado(u)}
+                          title={u.pagado ? "Quitar estado de pago" : "Registrar pago único"}
+                        >
+                          {u.pagado ? <><XCircle size={14}/> Sin Pago</> : <><BadgeDollarSign size={14}/> Pagado</>}
+                        </button>
+                        
+                        <button
+                          className={`toggle-suspend-btn ${u.suspendido ? 'unsuspend' : 'suspend'}`}
+                          onClick={() => handleToggleSuspendido(u)}
+                          title={u.suspendido ? "Habilitar acceso" : "Suspender acceso"}
+                        >
+                          {u.suspendido ? <><CheckCircle size={14}/> Activar</> : <><XCircle size={14}/> Suspender</>}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

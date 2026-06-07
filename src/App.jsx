@@ -18,6 +18,7 @@ import Reportes from './pages/Reportes/Reportes';
 import Configuracion from './pages/Configuracion/Configuracion';
 import PortalDocente from './pages/Portal/PortalDocente';
 import AdminPanel from './pages/Admin/AdminPanel';
+import SubscriptionLock from './pages/Auth/SubscriptionLock';
 import { AlertProvider } from './contexts/AlertContext';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
             {/* Rutas públicas */}
             <Route path="/p/:schoolId" element={<PortalDocente />} />
             <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/locked" element={<SubscriptionLock />} />
 
             <Route path="/login" element={<Login />} />
             

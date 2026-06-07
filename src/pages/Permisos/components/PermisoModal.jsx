@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
 import { X, Calendar, User, Clock, FileText, Briefcase, Paperclip, AlertCircle } from 'lucide-react';
 import './PermisoModal.css';
 
@@ -12,6 +13,7 @@ const ESTADOS = [
 ];
 
 const PermisoModal = ({ isOpen, onClose, onSave, permisoToEdit }) => {
+  const { schoolId } = useAuth();
   const [formData, setFormData] = useState({
     trabajador: '',
     funcion: 'docente',
@@ -74,7 +76,7 @@ const PermisoModal = ({ isOpen, onClose, onSave, permisoToEdit }) => {
 
       // Subir archivo si hay uno nuevo
       if (archivo) {
-        const fileRef = ref(storage, `permisos/${Date.now()}_${archivo.name}`);
+        const fileRef = ref(storage, `schools/${schoolId}/permisos/${Date.now()}_${archivo.name}`);
         const snapshot = await uploadBytes(fileRef, archivo);
         finalUrl = await getDownloadURL(snapshot.ref);
         finalNombre = archivo.name;

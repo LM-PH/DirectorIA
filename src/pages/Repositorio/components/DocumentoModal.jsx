@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../config/firebase';
 import { useConfig } from '../../../contexts/ConfigContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { X, FileText, User, Calendar, BookOpen, Layers, Paperclip, UploadCloud } from 'lucide-react';
 import './DocumentoModal.css';
 
@@ -19,6 +20,7 @@ const TIPOS_DOC = [
 
 const DocumentoModal = ({ isOpen, onClose, onSave, documentoToEdit, entregasDisponibles = [] }) => {
   const { config } = useConfig();
+  const { schoolId } = useAuth();
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -108,7 +110,7 @@ const DocumentoModal = ({ isOpen, onClose, onSave, documentoToEdit, entregasDisp
       if (archivo) {
         // Sanitize name and add timestamp to avoid overwriting
         const cleanName = archivo.name.replace(/[^a-zA-Z0-9.]/g, '_');
-        const fileRef = ref(storage, `documentos/${Date.now()}_${cleanName}`);
+        const fileRef = ref(storage, `schools/${schoolId}/documentos/${Date.now()}_${cleanName}`);
         const snapshot = await uploadBytes(fileRef, archivo);
         
         finalUrl = await getDownloadURL(snapshot.ref);
