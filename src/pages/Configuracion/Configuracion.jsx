@@ -80,15 +80,19 @@ const Configuracion = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setSaving(true);
     setMessage({ type: '', text: '' });
 
     try {
+      if (!schoolId) {
+        throw new Error("Sesión no identificada. Por favor, recarga la página e intenta de nuevo.");
+      }
+
       let finalLogoUrl = config?.logoUrl || '';
 
       // If there's a new file, upload it first
-      if (logoFile) {
+      if (logoFile && logoPreview !== config?.logoUrl) {
         const logoRef = ref(storage, `schools/${schoolId}/logos/logo_escuela_${Date.now()}`);
         const snapshot = await uploadBytes(logoRef, logoFile);
         finalLogoUrl = await getDownloadURL(snapshot.ref);
@@ -104,12 +108,15 @@ const Configuracion = () => {
 
       setMessage({ type: 'success', text: 'Configuración guardada exitosamente.' });
     } catch (error) {
-      console.error('Error guardando configuración:', error);
-      setMessage({ type: 'error', text: 'Ocurrió un error al guardar. Verifica tus permisos o conexión.' });
+      console.error('Error detallado al guardar configuración:', error);
+      setMessage({ 
+        type: 'error', 
+        text: `Error al guardar: ${error.message || 'Verifica tus permisos, CORS o conexión.'}` 
+      });
     } finally {
       setSaving(false);
-      // Clear message after 3 seconds
-      setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     }
   };
 

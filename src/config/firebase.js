@@ -22,4 +22,8 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// ⚡ Evitar que las subidas de archivos se queden congeladas indefinidamente por problemas de CORS o red
+storage.maxUploadRetryTime = 8000; // 8 segundos máximo para reintentos de subidas
+storage.maxOperationRetryTime = 8000; // 8 segundos máximo para otras operaciones
+
 export default app;
