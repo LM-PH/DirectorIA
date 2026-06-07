@@ -68,6 +68,12 @@ const Reportes = () => {
   useEffect(() => {
     if (activeReport) {
       fetchReportData(activeReport.id);
+      // Auto-scroll on mobile
+      if (window.innerWidth <= 1024) {
+        setTimeout(() => {
+          document.querySelector('.reportes-preview-area')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     }
   }, [activeReport, filtroMes, filtroAnio]);
 
