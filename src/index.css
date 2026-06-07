@@ -47,20 +47,7 @@
   --radius-full: 9999px;
 }
 
-/* DARK MODE SUPPORT */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-text-primary: #f8fafc;   /* White text */
-    --color-text-secondary: #94a3b8; /* Light slate text */
-    --color-background: #0f172a;     /* Very dark blue/slate */
-    --color-surface: #1e293b;        /* Dark slate card bg */
-    --color-border: #334155;         /* Dark border */
-    
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  }
-}
+/* DARK MODE SUPPORT REMOVED PER USER REQUEST */
 
 * {
   box-sizing: border-box;
