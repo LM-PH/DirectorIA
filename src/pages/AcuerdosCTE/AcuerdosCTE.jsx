@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, CheckCircle, Clock, AlertTriangle, AlertCircle, Edit2, Trash2, Filter } from 'lucide-react';
 import AcuerdoModal from './components/AcuerdoModal';
 import './AcuerdosCTE.css';
 
 const AcuerdosCTE = () => {
+  const { schoolId } = useAuth();
   const [acuerdos, setAcuerdos] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -22,7 +24,8 @@ const AcuerdosCTE = () => {
   });
 
   useEffect(() => {
-    const q = query(collection(db, 'acuerdos_cte'), orderBy('fechaCompromiso', 'asc'));
+    if (!schoolId) return;
+    const q = query(collection(db, 'schools', schoolId, 'acuerdos_cte'), orderBy('fechaCompromiso', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -36,7 +39,7 @@ const AcuerdosCTE = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [schoolId]);
 
   const handleOpenNew = () => {
     setAcuerdoToEdit(null);
@@ -50,16 +53,16 @@ const AcuerdosCTE = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar este acuerdo?')) {
-      await deleteDoc(doc(db, 'acuerdos_cte', id));
+      await deleteDoc(doc(db, 'schools', schoolId, 'acuerdos_cte', id));
     }
   };
 
   const handleSave = async (data) => {
     if (data.id) {
       const { id, ...updateData } = data;
-      await updateDoc(doc(db, 'acuerdos_cte', id), { ...updateData, updatedAt: new Date() });
+      await updateDoc(doc(db, 'schools', schoolId, 'acuerdos_cte', id), { ...updateData, updatedAt: new Date() });
     } else {
-      await addDoc(collection(db, 'acuerdos_cte'), { ...data, createdAt: new Date() });
+      await addDoc(collection(db, 'schools', schoolId, 'acuerdos_cte'), { ...data, createdAt: new Date() });
     }
   };
 

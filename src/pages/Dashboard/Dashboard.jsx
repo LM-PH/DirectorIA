@@ -12,9 +12,11 @@ import {
   CheckCircle2,
   Users
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
 
 const Dashboard = () => {
+  const { schoolId } = useAuth();
   // State for dashboard data
   const [loading, setLoading] = useState(true);
   const [summaryData, setSummaryData] = useState({
@@ -28,19 +30,21 @@ const Dashboard = () => {
   const [activities, setActivities] = useState([]);
 
   useEffect(() => {
+    if (!schoolId) return;
     import('firebase/firestore').then(({ collection, getDocs }) => {
       const { db } = require('../../config/firebase');
 
       const fetchDashboardData = async () => {
         try {
+          const base = `schools/${schoolId}`;
           // Fetch collections
           const [agendaSnap, permisosSnap, acuerdosSnap, docsSnap, pemcSnap, entregasSnap] = await Promise.all([
-            getDocs(collection(db, 'agenda')),
-            getDocs(collection(db, 'permisos')),
-            getDocs(collection(db, 'acuerdos_cte')),
-            getDocs(collection(db, 'documentos')),
-            getDocs(collection(db, 'pemc')),
-            getDocs(collection(db, 'entregas_esperadas'))
+            getDocs(collection(db, base, 'agenda')),
+            getDocs(collection(db, base, 'permisos')),
+            getDocs(collection(db, base, 'acuerdos_cte')),
+            getDocs(collection(db, base, 'documentos')),
+            getDocs(collection(db, base, 'pemc')),
+            getDocs(collection(db, base, 'entregas_esperadas'))
           ]);
 
           const todayDate = new Date();
@@ -143,7 +147,7 @@ const Dashboard = () => {
 
       fetchDashboardData();
     });
-  }, []);
+  }, [schoolId]);
 
   const today = new Date().toLocaleDateString('es-MX', { 
     weekday: 'long', 

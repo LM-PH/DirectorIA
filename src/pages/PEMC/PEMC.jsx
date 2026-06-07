@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Target, Plus, CheckCircle, Clock, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import AccionModal from './components/AccionModal';
 import './PEMC.css';
@@ -17,6 +18,7 @@ const AMBITOS = [
 ];
 
 const PEMC = () => {
+  const { schoolId } = useAuth();
   const [acciones, setAcciones] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -25,8 +27,9 @@ const PEMC = () => {
   const [accionToEdit, setAccionToEdit] = useState(null);
 
   useEffect(() => {
+    if (!schoolId) return;
     // Listen to pemc collection
-    const q = query(collection(db, 'pemc'), orderBy('fechaInicio', 'asc'));
+    const q = query(collection(db, 'schools', schoolId, 'pemc'), orderBy('fechaInicio', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -40,7 +43,7 @@ const PEMC = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [schoolId]);
 
   const handleOpenNew = () => {
     setAccionToEdit(null);
@@ -55,7 +58,7 @@ const PEMC = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Eliminar esta acción del PEMC permanentemente?')) {
       try {
-        await deleteDoc(doc(db, 'pemc', id));
+        await deleteDoc(doc(db, 'schools', schoolId, 'pemc', id));
       } catch (error) {
         console.error("Error deleting:", error);
       }
@@ -66,9 +69,9 @@ const PEMC = () => {
     try {
       if (data.id) {
         const { id, ...updateData } = data;
-        await updateDoc(doc(db, 'pemc', id), { ...updateData, updatedAt: new Date() });
+        await updateDoc(doc(db, 'schools', schoolId, 'pemc', id), { ...updateData, updatedAt: new Date() });
       } else {
-        await addDoc(collection(db, 'pemc'), { ...data, createdAt: new Date() });
+        await addDoc(collection(db, 'schools', schoolId, 'pemc'), { ...data, createdAt: new Date() });
       }
     } catch (error) {
       console.error("Error saving:", error);

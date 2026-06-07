@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Printer, FileText, CheckSquare, Users, FolderKanban, Briefcase, Calendar as CalendarIcon, Download } from 'lucide-react';
 import PrintTemplate from './components/PrintTemplate';
 import './Reportes.css';
@@ -23,52 +24,54 @@ const REPORT_TYPES = [
 ];
 
 const Reportes = () => {
+  const { schoolId } = useAuth();
   const [activeReport, setActiveReport] = useState(null);
   const [reportData, setReportData] = useState([]);
-  const [extraData, setExtraData] = useState([]); // Usado para cruces (ej. Entregas vs Documentos)
+  const [extraData, setExtraData] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Filtros globales para reportes
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1);
   const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear());
 
   const printRef = useRef(null);
 
   const fetchReportData = async (reportId) => {
+    if (!schoolId) return;
     setLoading(true);
     try {
+      const base = `schools/${schoolId}`;
       if (reportId === 'permisos') {
-        const snap = await getDocs(collection(db, 'permisos'));
+        const snap = await getDocs(collection(db, base, 'permisos'));
         let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         data.sort((a,b) => (a.fecha || '').localeCompare(b.fecha || ''));
         setReportData(data);
       } else if (reportId === 'cte') {
-        const snap = await getDocs(collection(db, 'acuerdos_cte'));
+        const snap = await getDocs(collection(db, base, 'acuerdos_cte'));
         let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         data.sort((a,b) => (a.fechaCompromiso || '').localeCompare(b.fechaCompromiso || ''));
         setReportData(data);
       } else if (reportId === 'pemc') {
-        const snap = await getDocs(collection(db, 'pemc'));
+        const snap = await getDocs(collection(db, base, 'pemc'));
         let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         data.sort((a,b) => (a.fechaInicio || '').localeCompare(b.fechaInicio || ''));
         setReportData(data);
       } else if (reportId === 'documentos') {
-        const snap = await getDocs(collection(db, 'documentos'));
+        const snap = await getDocs(collection(db, base, 'documentos'));
         let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         data.sort((a,b) => (a.fechaRecepcion || '').localeCompare(b.fechaRecepcion || ''));
         setReportData(data);
       } else if (reportId === 'agenda') {
-        const snap = await getDocs(collection(db, 'agenda'));
+        const snap = await getDocs(collection(db, base, 'agenda'));
         let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         data.sort((a,b) => (a.date || '').localeCompare(b.date || ''));
         setReportData(data);
       } else if (reportId === 'entregas') {
-        const snapEntregas = await getDocs(collection(db, 'entregas_esperadas'));
+        const snapEntregas = await getDocs(collection(db, base, 'entregas_esperadas'));
         let data = snapEntregas.docs.map(d => ({ id: d.id, ...d.data() }));
         data.sort((a,b) => (a.fechaLimite || '').localeCompare(b.fechaLimite || ''));
         setReportData(data);
         
-        const snapDocs = await getDocs(collection(db, 'documentos'));
+        const snapDocs = await getDocs(collection(db, base, 'documentos'));
         setExtraData(snapDocs.docs.map(d => ({ id: d.id, ...d.data() })));
       }
     } catch (e) {

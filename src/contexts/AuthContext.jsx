@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     currentUser,
+    schoolId: currentUser?.uid || null,
     login,
     loginWithGoogle,
     logout

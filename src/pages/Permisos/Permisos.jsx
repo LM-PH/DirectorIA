@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, List, Calendar as CalendarIcon, AlertTriangle, ShieldAlert } from 'lucide-react';
 import PermisoModal from './components/PermisoModal';
 import ListaPermisos from './components/ListaPermisos';
@@ -19,9 +20,10 @@ const getWeekNumber = (d) => {
 };
 
 const Permisos = () => {
+  const { schoolId } = useAuth();
   const [permisos, setPermisos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+  const [viewMode, setViewMode] = useState('list');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [permisoToEdit, setPermisoToEdit] = useState(null);
@@ -33,7 +35,8 @@ const Permisos = () => {
   const { showAlert } = useAlert();
 
   useEffect(() => {
-    const q = query(collection(db, 'permisos'), orderBy('fecha', 'desc'));
+    if (!schoolId) return;
+    const q = query(collection(db, 'schools', schoolId, 'permisos'), orderBy('fecha', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPermisos(data);
@@ -45,7 +48,7 @@ const Permisos = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     if (permisoToPrint) {
@@ -131,7 +134,7 @@ const Permisos = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Eliminar esta solicitud definitivamente?')) {
       try {
-        await deleteDoc(doc(db, 'permisos', id));
+        await deleteDoc(doc(db, 'schools', schoolId, 'permisos', id));
         showAlert('Solicitud eliminada.', 'success');
       } catch (error) {
         if (error.code === 'permission-denied') showAlert('Error: Permisos insuficientes. Inicia sesión.', 'error');
@@ -142,7 +145,7 @@ const Permisos = () => {
 
   const handleChangeStatus = async (permiso, nuevoEstado) => {
     try {
-      await updateDoc(doc(db, 'permisos', permiso.id), { estado: nuevoEstado, updatedAt: new Date() });
+      await updateDoc(doc(db, 'schools', schoolId, 'permisos', permiso.id), { estado: nuevoEstado, updatedAt: new Date() });
       showAlert(`Estado actualizado a ${nuevoEstado}.`, 'success');
     } catch (error) {
       if (error.code === 'permission-denied') showAlert('Error: Permisos insuficientes. Inicia sesión.', 'error');
@@ -154,13 +157,13 @@ const Permisos = () => {
     try {
       if (data.id) {
         const { id, ...updateData } = data;
-        await updateDoc(doc(db, 'permisos', id), { ...updateData, updatedAt: new Date() });
+        await updateDoc(doc(db, 'schools', schoolId, 'permisos', id), { ...updateData, updatedAt: new Date() });
         showAlert('Permiso actualizado.', 'success');
       } else {
-        await addDoc(collection(db, 'permisos'), { ...data, createdAt: new Date() });
+        await addDoc(collection(db, 'schools', schoolId, 'permisos'), { ...data, createdAt: new Date() });
         showAlert('Permiso creado correctamente.', 'success');
       }
-      setIsModalOpen(false); // asumiendo que cerramos el modal aqui si todo va bien
+      setIsModalOpen(false);
     } catch (error) {
       if (error.code === 'permission-denied') showAlert('Error de seguridad: Permisos insuficientes. Inicia sesión.', 'error');
       else showAlert('Error al guardar el permiso.', 'error');

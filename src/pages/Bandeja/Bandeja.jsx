@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Inbox, Mail, Paperclip, ChevronRight, CheckCircle, Tag, Search, Archive } from 'lucide-react';
 import ClasificarModal from './components/ClasificarModal';
 import { useConfig } from '../../contexts/ConfigContext';
@@ -8,6 +9,7 @@ import { useAlert } from '../../contexts/AlertContext';
 import './Bandeja.css';
 
 const Bandeja = () => {
+  const { schoolId } = useAuth();
   const [correos, setCorreos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterState, setFilterState] = useState('pendiente');
@@ -19,7 +21,8 @@ const Bandeja = () => {
   const { showAlert } = useAlert();
 
   useEffect(() => {
-    const q = query(collection(db, 'correos_recibidos'), orderBy('fecha', 'desc'));
+    if (!schoolId) return;
+    const q = query(collection(db, 'schools', schoolId, 'correos_recibidos'), orderBy('fecha', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCorreos(data);
@@ -30,7 +33,7 @@ const Bandeja = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [schoolId]);
 
   const handleOpenClassify = (correo) => {
     setCorreoToClassify(correo);
@@ -41,7 +44,7 @@ const Bandeja = () => {
     try {
       // 1. Guardar en el módulo correspondiente
       if (data.moduloDestino === 'Repositorio') {
-        await addDoc(collection(db, 'documentos'), {
+        await addDoc(collection(db, 'schools', schoolId, 'documentos'), {
           nombre: data.asunto,
           tipo: data.clasificacion,
           docente: data.remitenteNombre,
@@ -56,9 +59,9 @@ const Bandeja = () => {
           createdAt: new Date()
         });
       } else if (data.moduloDestino === 'Permisos') {
-        await addDoc(collection(db, 'permisos'), {
+        await addDoc(collection(db, 'schools', schoolId, 'permisos'), {
           trabajador: data.remitenteNombre,
-          funcion: 'docente', // Default
+          funcion: 'docente',
           fecha: new Date().toISOString().split('T')[0],
           horaInicio: '08:00',
           horaTermino: '13:00',
@@ -71,15 +74,15 @@ const Bandeja = () => {
           createdAt: new Date()
         });
       } else if (data.moduloDestino === 'PEMC' && data.targetId) {
-        await updateDoc(doc(db, 'pemc', data.targetId), {
+        await updateDoc(doc(db, 'schools', schoolId, 'pemc', data.targetId), {
           evidenciaUrl: data.adjuntos?.[0]?.url || '',
           evidenciaNombre: data.adjuntos?.[0]?.nombre || '',
           observaciones: (data.observacionesPrevias ? data.observacionesPrevias + '\n' : '') + `Evidencia subida vía Bandeja: ${data.asunto}`,
-          estado: 'cumplido', // Podríamos preguntar, pero asumamos cumplido al subir evidencia.
+          estado: 'cumplido',
           updatedAt: new Date()
         });
       } else if (data.moduloDestino === 'CTE' && data.targetId) {
-        await updateDoc(doc(db, 'acuerdos_cte', data.targetId), {
+        await updateDoc(doc(db, 'schools', schoolId, 'acuerdos_cte', data.targetId), {
           evidenciaUrl: data.adjuntos?.[0]?.url || '',
           evidenciaNombre: data.adjuntos?.[0]?.nombre || '',
           observaciones: (data.observacionesPrevias ? data.observacionesPrevias + '\n' : '') + `Evidencia subida vía Bandeja: ${data.asunto}`,
@@ -89,7 +92,7 @@ const Bandeja = () => {
       }
 
       // 2. Marcar como clasificado
-      await updateDoc(doc(db, 'correos_recibidos', data.id), { 
+      await updateDoc(doc(db, 'schools', schoolId, 'correos_recibidos', data.id), { 
         estado: 'clasificado',
         clasificacionFinal: data.clasificacion,
         moduloDestino: data.moduloDestino,
@@ -109,7 +112,7 @@ const Bandeja = () => {
 
   const handleArchive = async (id) => {
     try {
-      await updateDoc(doc(db, 'correos_recibidos', id), { estado: 'archivado', updatedAt: new Date() });
+      await updateDoc(doc(db, 'schools', schoolId, 'correos_recibidos', id), { estado: 'archivado', updatedAt: new Date() });
       showAlert('Correo archivado.', 'info');
     } catch (error) {
       if (error.code === 'permission-denied') {
@@ -123,7 +126,7 @@ const Bandeja = () => {
   const handleDelete = async (id) => {
     if(window.confirm('¿Eliminar este correo permanentemente?')) {
       try {
-        await deleteDoc(doc(db, 'correos_recibidos', id));
+        await deleteDoc(doc(db, 'schools', schoolId, 'correos_recibidos', id));
         showAlert('Correo eliminado permanentemente.', 'success');
       } catch (error) {
         if (error.code === 'permission-denied') {

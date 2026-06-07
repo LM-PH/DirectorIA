@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Calendar as CalendarIcon, List, Plus, Trash2, Edit2 } from 'lucide-react';
 import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
@@ -8,6 +9,7 @@ import EventModal from './components/EventModal';
 import './Agenda.css';
 
 const Agenda = () => {
+  const { schoolId } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
@@ -17,8 +19,9 @@ const Agenda = () => {
   const [eventToEdit, setEventToEdit] = useState(null);
 
   useEffect(() => {
+    if (!schoolId) return;
     // Listen to agenda collection
-    const q = query(collection(db, 'agenda'), orderBy('fecha', 'asc'), orderBy('hora', 'asc'));
+    const q = query(collection(db, 'schools', schoolId, 'agenda'), orderBy('fecha', 'asc'), orderBy('hora', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const eventsData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -32,7 +35,7 @@ const Agenda = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [schoolId]);
 
   const handleOpenNewEvent = () => {
     setEventToEdit(null);
@@ -53,7 +56,7 @@ const Agenda = () => {
   const handleDelete = async (eventId) => {
     if (window.confirm('¿Estás seguro de eliminar este evento?')) {
       try {
-        await deleteDoc(doc(db, 'agenda', eventId));
+        await deleteDoc(doc(db, 'schools', schoolId, 'agenda', eventId));
         setSelectedEvent(null);
       } catch (error) {
         console.error("Error deleting event:", error);
@@ -66,13 +69,13 @@ const Agenda = () => {
       if (eventData.id) {
         // Update
         const { id, ...dataToUpdate } = eventData;
-        await updateDoc(doc(db, 'agenda', id), {
+        await updateDoc(doc(db, 'schools', schoolId, 'agenda', id), {
           ...dataToUpdate,
           updatedAt: new Date()
         });
       } else {
         // Create
-        await addDoc(collection(db, 'agenda'), {
+        await addDoc(collection(db, 'schools', schoolId, 'agenda'), {
           ...eventData,
           createdAt: new Date(),
           updatedAt: new Date()

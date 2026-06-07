@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Filter, FileText, Image as ImageIcon, Download, Trash2, Edit2, Search, File, HardDrive, ClipboardList } from 'lucide-react';
 import DocumentoModal from './components/DocumentoModal';
 import ControlEntregas from './components/ControlEntregas';
@@ -15,6 +16,7 @@ const TIPOS_DOC = [
 ];
 
 const Repositorio = () => {
+  const { schoolId } = useAuth();
   const [documentos, setDocumentos] = useState([]);
   const [entregas, setEntregas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +41,9 @@ const Repositorio = () => {
   });
 
   useEffect(() => {
+    if (!schoolId) return;
     // Fetch Documentos
-    const qDocs = query(collection(db, 'documentos'), orderBy('fechaRecepcion', 'desc'));
+    const qDocs = query(collection(db, 'schools', schoolId, 'documentos'), orderBy('fechaRecepcion', 'desc'));
     const unsubDocs = onSnapshot(qDocs, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setDocumentos(data);
@@ -51,7 +54,7 @@ const Repositorio = () => {
     });
 
     // Fetch Entregas Esperadas
-    const qEntregas = query(collection(db, 'entregas_esperadas'), orderBy('fechaLimite', 'asc'));
+    const qEntregas = query(collection(db, 'schools', schoolId, 'entregas_esperadas'), orderBy('fechaLimite', 'asc'));
     const unsubEntregas = onSnapshot(qEntregas, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEntregas(data);
@@ -63,7 +66,7 @@ const Repositorio = () => {
       unsubDocs();
       unsubEntregas();
     };
-  }, []);
+  }, [schoolId]);
 
   const handleOpenNewDoc = () => {
     setDocToEdit(null);
@@ -78,7 +81,7 @@ const Repositorio = () => {
   const handleDeleteDoc = async (id) => {
     if(window.confirm('¿Eliminar este documento definitivamente?')) {
       try {
-        await deleteDoc(doc(db, 'documentos', id));
+        await deleteDoc(doc(db, 'schools', schoolId, 'documentos', id));
         showAlert('Documento eliminado.', 'success');
       } catch (error) {
         if (error.code === 'permission-denied') showAlert('Error de seguridad: Permisos insuficientes.', 'error');
@@ -91,10 +94,10 @@ const Repositorio = () => {
     try {
       if(data.id) {
         const {id, ...updateData} = data;
-        await updateDoc(doc(db, 'documentos', id), {...updateData, updatedAt: new Date()});
+        await updateDoc(doc(db, 'schools', schoolId, 'documentos', id), {...updateData, updatedAt: new Date()});
         showAlert('Documento actualizado.', 'success');
       } else {
-        await addDoc(collection(db, 'documentos'), {...data, createdAt: new Date()});
+        await addDoc(collection(db, 'schools', schoolId, 'documentos'), {...data, createdAt: new Date()});
         showAlert('Documento guardado correctamente.', 'success');
       }
       setIsModalOpen(false);
@@ -116,16 +119,16 @@ const Repositorio = () => {
 
   const handleDeleteEntrega = async (id) => {
     if (window.confirm('¿Eliminar esta solicitud de entrega?')) {
-      await deleteDoc(doc(db, 'entregas_esperadas', id));
+      await deleteDoc(doc(db, 'schools', schoolId, 'entregas_esperadas', id));
     }
   };
 
   const handleSaveEntrega = async (data) => {
     if (data.id) {
       const { id, ...updateData } = data;
-      await updateDoc(doc(db, 'entregas_esperadas', id), { ...updateData, updatedAt: new Date() });
+      await updateDoc(doc(db, 'schools', schoolId, 'entregas_esperadas', id), { ...updateData, updatedAt: new Date() });
     } else {
-      await addDoc(collection(db, 'entregas_esperadas'), { ...data, createdAt: new Date() });
+      await addDoc(collection(db, 'schools', schoolId, 'entregas_esperadas'), { ...data, createdAt: new Date() });
     }
   };
 
