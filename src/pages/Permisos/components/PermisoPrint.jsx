@@ -24,7 +24,7 @@ const PermisoPrint = forwardRef(({ permiso }, ref) => {
           )}
           <div className="print-header-text">
             <h2>{config?.nombreEscuela || 'Nombre de la Escuela No Configurado'}</h2>
-            <p><strong>CCT:</strong> {config?.cct || '---'} | <strong>Zona:</strong> {config?.zona || '---'} | <strong>Sector:</strong> {config?.sector || '---'}</p>
+            <p><strong>CCT:</strong> {config?.cct || '---'} | <strong>Zona Escolar:</strong> {config?.zonaEscolar || '---'} | <strong>Sector:</strong> {config?.sector || '---'}</p>
             <p>Ciclo Escolar: {config?.cicloEscolar || '---'}</p>
           </div>
         </div>

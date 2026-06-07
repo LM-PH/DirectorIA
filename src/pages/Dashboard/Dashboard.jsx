@@ -52,7 +52,7 @@ const Dashboard = () => {
           const todayStr = todayDate.toISOString().split('T')[0];
 
           // 1. Eventos Hoy
-          const eventosHoy = agendaSnap.docs.filter(doc => doc.data().date === todayStr).length;
+          const eventosHoy = agendaSnap.docs.filter(doc => (doc.data().fecha || doc.data().date) === todayStr).length;
 
           // 2. Permisos Pendientes
           const permisosPendientes = permisosSnap.docs.filter(doc => doc.data().estado === 'pendiente').length;

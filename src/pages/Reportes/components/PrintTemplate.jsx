@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { useConfig } from '../../../contexts/ConfigContext';
 import './PrintTemplate.css';
 
-const PrintTemplate = forwardRef(({ title, subtitle, children }, ref) => {
+const PrintTemplate = forwardRef(({ title, subtitle, children, isScreenPreview }, ref) => {
   const { config } = useConfig();
   
   const hoy = new Date().toLocaleDateString('es-MX', { 
@@ -12,7 +12,7 @@ const PrintTemplate = forwardRef(({ title, subtitle, children }, ref) => {
   });
 
   return (
-    <div className="print-report-wrapper print-only" ref={ref}>
+    <div className={`print-report-wrapper ${isScreenPreview ? 'screen-preview' : 'print-only'}`} ref={ref}>
       <div className="print-container">
         
         {/* Encabezado Oficial con Membrete */}

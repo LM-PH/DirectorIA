@@ -63,7 +63,7 @@ const Reportes = () => {
       } else if (reportId === 'agenda') {
         const snap = await getDocs(collection(db, base, 'agenda'));
         let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        data.sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+        data.sort((a,b) => (a.fecha || '').localeCompare(b.fecha || ''));
         setReportData(data);
       } else if (reportId === 'entregas') {
         const snapEntregas = await getDocs(collection(db, base, 'entregas_esperadas'));
@@ -186,9 +186,15 @@ const Reportes = () => {
                 ) : (
                   <div className="preview-content-simulated">
                     {/* Esta es la vista previa en pantalla, similar al impreso pero sin ocultar la app */}
-                    <div className="preview-glass">
-                      <div className="preview-watermark">VISTA PREVIA</div>
-                      {renderActiveTemplate()}
+                    <div className="preview-glass" style={{ padding: 0, background: 'transparent', boxShadow: 'none', minHeight: 'auto' }}>
+                      <div className="preview-watermark" style={{ zIndex: 10 }}>VISTA PREVIA</div>
+                      <PrintTemplate 
+                        title={`Reporte de ${activeReport.title}`}
+                        subtitle={`Fecha de corte: ${new Date().toLocaleDateString('es-MX')}`}
+                        isScreenPreview={true}
+                      >
+                        {renderActiveTemplate()}
+                      </PrintTemplate>
                     </div>
                   </div>
                 )}
