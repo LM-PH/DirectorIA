@@ -17,6 +17,7 @@ import Bandeja from './pages/Bandeja/Bandeja';
 import Reportes from './pages/Reportes/Reportes';
 import Configuracion from './pages/Configuracion/Configuracion';
 import PortalDocente from './pages/Portal/PortalDocente';
+import AdminPanel from './pages/Admin/AdminPanel';
 import { AlertProvider } from './contexts/AlertContext';
 
 function App() {
@@ -26,8 +27,9 @@ function App() {
         <ConfigProvider>
           <Router>
           <Routes>
-            {/* Ruta pública del Portal Docente — sin autenticación */}
+            {/* Rutas públicas */}
             <Route path="/p/:schoolId" element={<PortalDocente />} />
+            <Route path="/admin" element={<AdminPanel />} />
 
             <Route path="/login" element={<Login />} />
             
