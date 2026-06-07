@@ -22,14 +22,8 @@ const Bandeja = () => {
     const q = query(collection(db, 'correos_recibidos'), orderBy('fecha', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Si está vacío, sembramos datos de prueba
-      if (data.length === 0) {
-        sembrarDatosPrueba();
-      } else {
-        setCorreos(data);
-        setLoading(false);
-      }
+      setCorreos(data);
+      setLoading(false);
     }, (error) => {
       console.error("Error fetching bandeja:", error);
       setLoading(false);
@@ -37,41 +31,6 @@ const Bandeja = () => {
 
     return unsubscribe;
   }, []);
-
-  const sembrarDatosPrueba = async () => {
-    const mockData = [
-      {
-        remitenteEmail: 'juan.maestro@escuela.edu.mx',
-        remitenteNombre: 'Juan Pérez',
-        asunto: 'Entrega de Planeación Diagnóstica',
-        cuerpo: 'Buenos días Director. Adjunto mi planeación diagnóstica para revisión. Saludos.',
-        fecha: new Date().toISOString(),
-        adjuntos: [
-          { nombre: 'planeacion_diagnostica_juan.pdf', url: '#', tipo: 'application/pdf' }
-        ],
-        estado: 'pendiente',
-        tipoSugerido: 'Planeación docente'
-      },
-      {
-        remitenteEmail: 'maria.lopez@escuela.edu.mx',
-        remitenteNombre: 'María López',
-        asunto: 'Solicitud de Permiso Económico',
-        cuerpo: 'Estimado director, por medio de la presente solicito permiso económico para el día de mañana por asuntos personales.',
-        fecha: new Date(Date.now() - 86400000).toISOString(), // Ayer
-        adjuntos: [],
-        estado: 'pendiente',
-        tipoSugerido: 'Permiso económico'
-      }
-    ];
-
-    try {
-      for (const item of mockData) {
-        await addDoc(collection(db, 'correos_recibidos'), item);
-      }
-    } catch (e) {
-      console.error("Error sembrando datos:", e);
-    }
-  };
 
   const handleOpenClassify = (correo) => {
     setCorreoToClassify(correo);
