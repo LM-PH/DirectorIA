@@ -3,11 +3,23 @@ import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../config/firebase';
 import { useConfig } from '../../contexts/ConfigContext';
-import { Save, Upload, School, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { Save, Upload, School, Image as ImageIcon, AlertCircle, Link, Copy, Check, Share2 } from 'lucide-react';
 import './Configuracion.css';
 
 const Configuracion = () => {
   const { config, loadingConfig } = useConfig();
+  const { schoolId } = useAuth();
+  const [copied, setCopied] = useState(false);
+  
+  const portalUrl = schoolId ? `${window.location.origin}/p/${schoolId}` : '';
+
+  const handleCopy = () => {
+    if (!portalUrl) return;
+    navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
   
   const [formData, setFormData] = useState({
     nombreEscuela: '',
@@ -283,6 +295,45 @@ const Configuracion = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Portal Docente Card */}
+      <div className="config-card" style={{ marginTop: '1.5rem' }}>
+        <div className="card-header">
+          <Share2 size={20} className="text-primary" />
+          <h2>Enlace del Portal Docente</h2>
+        </div>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', marginBottom: '1rem' }}>
+          Comparte este enlace con tus maestros. Ellos podrán enviarte permisos, planeaciones y documentos directamente a tu Bandeja de Recepción, sin necesidad de correo electrónico.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{
+            flex: 1,
+            background: '#f1f5f9',
+            border: '1.5px solid var(--color-border)',
+            borderRadius: '0.6rem',
+            padding: '0.75rem 1rem',
+            fontFamily: 'monospace',
+            fontSize: '0.9rem',
+            color: 'var(--color-text-primary)',
+            wordBreak: 'break-all',
+            minWidth: '200px'
+          }}>
+            <Link size={14} style={{ marginRight: 8, verticalAlign: 'middle', color: 'var(--color-primary)' }}/>
+            {portalUrl || 'Cargando enlace...'}
+          </div>
+          <button
+            onClick={handleCopy}
+            className={copied ? 'btn-primary' : 'btn-secondary'}
+            disabled={!portalUrl}
+            style={{ whiteSpace: 'nowrap', minWidth: 140 }}
+          >
+            {copied ? <><Check size={16}/> ¡Copiado!</> : <><Copy size={16}/> Copiar enlace</>}
+          </button>
+        </div>
+        <p style={{ marginTop: '0.75rem', fontSize: '0.82rem', color: '#94a3b8' }}>
+          💡 Tip: Puedes compartirlo por WhatsApp, correo o pegarlo en el grupo de tu escuela. No requiere contraseña.
+        </p>
       </div>
     </div>
   );
