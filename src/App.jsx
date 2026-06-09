@@ -16,6 +16,7 @@ import Permisos from './pages/Permisos/Permisos';
 import Bandeja from './pages/Bandeja/Bandeja';
 import Reportes from './pages/Reportes/Reportes';
 import Configuracion from './pages/Configuracion/Configuracion';
+import Horarios from './pages/Horarios/Horarios';
 import PortalDocente from './pages/Portal/PortalDocente';
 import AdminPanel from './pages/Admin/AdminPanel';
 import SubscriptionLock from './pages/Auth/SubscriptionLock';
@@ -52,6 +53,7 @@ function App() {
               <Route path="bandeja" element={<Bandeja />} />
               <Route path="reportes" element={<Reportes />} />
               <Route path="configuracion" element={<Configuracion />} />
+              <Route path="horarios" element={<Horarios />} />
             </Route>
           </Routes>
         </Router>

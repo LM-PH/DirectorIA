@@ -12,7 +12,8 @@ import {
   Inbox,
   Printer,
   Menu,
-  X
+  X,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
@@ -41,6 +42,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/acuerdos', name: 'Acuerdos CTE', icon: <Users size={20} /> },
     { path: '/repositorio', name: 'Repositorio', icon: <FolderOpen size={20} /> },
     { path: '/permisos', name: 'Permisos', icon: <Briefcase size={20} /> },
+    { path: '/horarios', name: 'Horarios', icon: <Calendar size={20} /> },
     { path: '/reportes', name: 'Reportes', icon: <Printer size={20} /> },
     { path: '/configuracion', name: 'Configuración', icon: <Settings size={20} /> },
   ];
