@@ -206,6 +206,56 @@
   color: #94a3b8;
 }
 
+/* ===== ESTILOS PARA LAS FIRMAS DE PARTICIPANTES DE CTE (PANTALLA) ===== */
+.print-report-wrapper.screen-preview .cte-signatures-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 30px;
+}
+
+@media (max-width: 768px) {
+  .print-report-wrapper.screen-preview .cte-signatures-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .print-report-wrapper.screen-preview .cte-signatures-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.print-report-wrapper.screen-preview .cte-signature-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.print-report-wrapper.screen-preview .cte-signature-line {
+  width: 90%;
+  border-bottom: 1.5px solid #94a3b8;
+  margin-bottom: 6px;
+  height: 35px;
+}
+
+.print-report-wrapper.screen-preview .cte-signature-name {
+  font-weight: 700;
+  font-size: 11px;
+  margin: 0;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.print-report-wrapper.screen-preview .cte-signature-label {
+  font-size: 9px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+  text-transform: uppercase;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -483,5 +533,44 @@
 
   .fw-bold {
     font-weight: bold;
+  }
+
+  /* ===== ESTILOS PARA LAS FIRMAS DE PARTICIPANTES DE CTE (IMPRESIÓN) ===== */
+  .cte-signatures-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin-top: 35px;
+    page-break-inside: avoid;
+  }
+
+  .cte-signature-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+  }
+
+  .cte-signature-line {
+    width: 90%;
+    border-bottom: 1.5px solid #475569;
+    margin-bottom: 6px;
+    height: 40px;
+  }
+
+  .cte-signature-name {
+    font-weight: bold;
+    font-size: 11px;
+    margin: 0;
+    color: #000;
+  }
+
+  .cte-signature-label {
+    font-size: 9px;
+    color: #475569;
+    margin: 2px 0 0 0;
+    text-transform: uppercase;
   }
 }

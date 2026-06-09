@@ -58,11 +58,32 @@ const AcuerdosCTE = () => {
   };
 
   const handleSave = async (data) => {
-    if (data.id) {
-      const { id, ...updateData } = data;
-      await updateDoc(doc(db, 'schools', schoolId, 'acuerdos_cte', id), { ...updateData, updatedAt: new Date() });
-    } else {
-      await addDoc(collection(db, 'schools', schoolId, 'acuerdos_cte'), { ...data, createdAt: new Date() });
+    try {
+      let docId = data.id;
+      if (data.id) {
+        const { id, ...updateData } = data;
+        await updateDoc(doc(db, 'schools', schoolId, 'acuerdos_cte', id), { ...updateData, updatedAt: new Date() });
+      } else {
+        const docRef = await addDoc(collection(db, 'schools', schoolId, 'acuerdos_cte'), { ...data, createdAt: new Date() });
+        docId = docRef.id;
+      }
+
+      // Sync participantes field across all agreements in the same session
+      if (data.fechaSesion && data.participantes !== undefined) {
+        // Find other agreements with same session date
+        const sameSessionAcuerdos = acuerdos.filter(a => a.fechaSesion === data.fechaSesion && a.id !== docId);
+        
+        // Update each one in Firestore
+        const promises = sameSessionAcuerdos.map(a => 
+          updateDoc(doc(db, 'schools', schoolId, 'acuerdos_cte', a.id), { 
+            participantes: data.participantes, 
+            updatedAt: new Date() 
+          })
+        );
+        await Promise.all(promises);
+      }
+    } catch (error) {
+      console.error("Error saving CTE agreement:", error);
     }
   };
 
@@ -257,6 +278,12 @@ const AcuerdosCTE = () => {
                         <span>{acuerdo.evidencia}</span>
                       </div>
                     )}
+                    {acuerdo.participantes && (
+                      <div className="footer-item" style={{ width: '100%', marginTop: '5px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <strong>Participantes:</strong>
+                        <span style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>{acuerdo.participantes}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -270,6 +297,7 @@ const AcuerdosCTE = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
         acuerdoToEdit={acuerdoToEdit}
+        acuerdos={acuerdos}
       />
     </div>
   );

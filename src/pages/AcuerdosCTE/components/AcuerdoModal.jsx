@@ -9,7 +9,7 @@ const ESTADOS = [
   { value: 'cumplido', label: 'Cumplido' }
 ];
 
-const AcuerdoModal = ({ isOpen, onClose, onSave, acuerdoToEdit }) => {
+const AcuerdoModal = ({ isOpen, onClose, onSave, acuerdoToEdit, acuerdos }) => {
   const [formData, setFormData] = useState({
     fechaSesion: '',
     tipoSesion: 'Ordinaria',
@@ -18,14 +18,18 @@ const AcuerdoModal = ({ isOpen, onClose, onSave, acuerdoToEdit }) => {
     fechaCompromiso: '',
     evidencia: '',
     estado: 'pendiente',
-    observaciones: ''
+    observaciones: '',
+    participantes: ''
   });
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (acuerdoToEdit) {
-      setFormData(acuerdoToEdit);
+      setFormData({
+        ...acuerdoToEdit,
+        participantes: acuerdoToEdit.participantes || ''
+      });
     } else {
       setFormData({
         fechaSesion: new Date().toISOString().split('T')[0],
@@ -35,10 +39,21 @@ const AcuerdoModal = ({ isOpen, onClose, onSave, acuerdoToEdit }) => {
         fechaCompromiso: '',
         evidencia: '',
         estado: 'pendiente',
-        observaciones: ''
+        observaciones: '',
+        participantes: ''
       });
     }
   }, [acuerdoToEdit, isOpen]);
+
+  // Auto-complete participantes from existing agreements in the same session
+  useEffect(() => {
+    if (!acuerdoToEdit && formData.fechaSesion && acuerdos) {
+      const match = acuerdos.find(a => a.fechaSesion === formData.fechaSesion && a.participantes);
+      if (match) {
+        setFormData(prev => ({ ...prev, participantes: match.participantes }));
+      }
+    }
+  }, [formData.fechaSesion, acuerdos, acuerdoToEdit]);
 
   if (!isOpen) return null;
 
@@ -149,6 +164,17 @@ const AcuerdoModal = ({ isOpen, onClose, onSave, acuerdoToEdit }) => {
                   placeholder="Ej. Formato firmado, producto de la sesión..."
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>Docentes Participantes (Escribe los nombres separados por comas o uno por línea)</label>
+              <textarea 
+                name="participantes" 
+                value={formData.participantes} 
+                onChange={handleChange} 
+                placeholder="Ej. Profr. Alberto Pérez, Profr. María Gómez, Profr. Carlos Ruiz..."
+                rows={3}
+              />
             </div>
 
             <div className="form-group">

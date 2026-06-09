@@ -32,6 +32,7 @@ const Reportes = () => {
   
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1);
   const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear());
+  const [filtroSesionCTE, setFiltroSesionCTE] = useState('');
 
   const printRef = useRef(null);
 
@@ -92,10 +93,36 @@ const Reportes = () => {
     }
   }, [activeReport, filtroMes, filtroAnio]);
 
+  // Auto-select latest CTE Session when CTE report is loaded
+  useEffect(() => {
+    if (activeReport?.id === 'cte' && reportData.length > 0) {
+      const sessions = [...new Set(reportData.map(a => `${a.tipoSesion} - ${a.fechaSesion}`))].sort((a,b) => b.localeCompare(a));
+      if (sessions.length > 0 && !filtroSesionCTE) {
+        setFiltroSesionCTE(sessions[0]);
+      }
+    } else if (activeReport?.id !== 'cte') {
+      setFiltroSesionCTE('');
+    }
+  }, [activeReport, reportData]);
+
   const handlePrint = () => {
     if (printRef.current) {
       window.print();
     }
+  };
+
+  const getFilteredCTEData = () => {
+    if (!filtroSesionCTE) return reportData;
+    const [tipo, fecha] = filtroSesionCTE.split(' - ');
+    return reportData.filter(a => a.tipoSesion === tipo && a.fechaSesion === fecha);
+  };
+
+  const getReportTitle = () => {
+    if (!activeReport) return '';
+    if (activeReport.id === 'cte' && filtroSesionCTE) {
+      return `Acuerdos de CTE: Sesión ${filtroSesionCTE}`;
+    }
+    return `Reporte de ${activeReport.title}`;
   };
 
   const renderActiveTemplate = () => {
@@ -105,7 +132,7 @@ const Reportes = () => {
     
     switch (activeReport.id) {
       case 'permisos': return <ReportePermisos {...props} />;
-      case 'cte': return <ReporteCTE {...props} />;
+      case 'cte': return <ReporteCTE data={getFilteredCTEData()} />;
       case 'pemc': return <ReportePEMC {...props} />;
       case 'documentos': return <ReporteDocumentos {...props} />;
       case 'entregas': return <ReporteEntregas {...props} />;
@@ -174,6 +201,20 @@ const Reportes = () => {
                       </select>
                     </>
                   )}
+
+                  {/* Filtro específico para CTE */}
+                  {activeReport.id === 'cte' && (
+                    <select 
+                      value={filtroSesionCTE} 
+                      onChange={e => setFiltroSesionCTE(e.target.value)}
+                      style={{ minWidth: '220px' }}
+                    >
+                      <option value="">Todas las Sesiones</option>
+                      {[...new Set(reportData.map(a => `${a.tipoSesion} - ${a.fechaSesion}`))].sort((a,b) => b.localeCompare(a)).map(session => (
+                        <option key={session} value={session}>Sesión: {session}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <button className="btn-primary" onClick={handlePrint} disabled={loading}>
                   <Printer size={18} /> Imprimir / PDF
@@ -189,7 +230,7 @@ const Reportes = () => {
                     <div className="preview-glass" style={{ padding: 0, background: 'transparent', boxShadow: 'none', minHeight: 'auto' }}>
                       <div className="preview-watermark" style={{ zIndex: 10 }}>VISTA PREVIA</div>
                       <PrintTemplate 
-                        title={`Reporte de ${activeReport.title}`}
+                        title={getReportTitle()}
                         subtitle={`Fecha de corte: ${new Date().toLocaleDateString('es-MX')}`}
                         isScreenPreview={true}
                       >
@@ -214,7 +255,7 @@ const Reportes = () => {
       {activeReport && !loading && (
         <PrintTemplate 
           ref={printRef} 
-          title={`Reporte de ${activeReport.title}`}
+          title={getReportTitle()}
           subtitle={`Fecha de corte: ${new Date().toLocaleDateString('es-MX')}`}
         >
           {renderActiveTemplate()}
