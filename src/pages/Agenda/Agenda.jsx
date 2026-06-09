@@ -20,13 +20,19 @@ const Agenda = () => {
 
   useEffect(() => {
     if (!schoolId) return;
-    // Listen to agenda collection
-    const q = query(collection(db, 'schools', schoolId, 'agenda'), orderBy('fecha', 'asc'), orderBy('hora', 'asc'));
+    // Listen to agenda collection (avoid multiple orderBy to prevent composite index requirements)
+    const q = query(collection(db, 'schools', schoolId, 'agenda'), orderBy('fecha', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const eventsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      // Sort stably by fecha and hora in-memory
+      eventsData.sort((a, b) => {
+        const dateCompare = (a.fecha || '').localeCompare(b.fecha || '');
+        if (dateCompare !== 0) return dateCompare;
+        return (a.hora || '').localeCompare(b.hora || '');
+      });
       setEvents(eventsData);
       setLoading(false);
     }, (error) => {
