@@ -13,7 +13,8 @@ import {
   Printer,
   Menu,
   X,
-  Calendar
+  Calendar,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
@@ -43,6 +44,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/repositorio', name: 'Repositorio', icon: <FolderOpen size={20} /> },
     { path: '/permisos', name: 'Permisos', icon: <Briefcase size={20} /> },
     { path: '/horarios', name: 'Horarios', icon: <Calendar size={20} /> },
+    { path: '/comisiones', name: 'Comisiones', icon: <ClipboardList size={20} /> },
     { path: '/reportes', name: 'Reportes', icon: <Printer size={20} /> },
     { path: '/configuracion', name: 'Configuración', icon: <Settings size={20} /> },
   ];
