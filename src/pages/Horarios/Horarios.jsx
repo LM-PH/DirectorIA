@@ -152,16 +152,23 @@ const Horarios = () => {
 
     const baseRef = doc(db, 'schools', schoolId);
 
-    // 1. Sync Config
+    // 1. Sync Config (merge with default values to prevent undefined fields)
     const unsubConfig = onSnapshot(doc(db, 'schools', schoolId, 'horarios_config', 'general'), (snap) => {
       if (snap.exists()) {
-        setConfig(snap.data());
+        console.log("Horarios config loaded from Firestore:", snap.data());
+        setConfig(prev => ({ ...prev, ...snap.data() }));
+      } else {
+        console.log("No Horarios config found in Firestore. Using default values.");
       }
+    }, (error) => {
+      console.error("Error syncing schedules config:", error);
     });
 
     // 2. Sync Docentes
     const unsubDocentes = onSnapshot(collection(db, 'schools', schoolId, 'horarios_docentes'), (snap) => {
       setDocentes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error("Error syncing docents:", error);
     });
 
     // 3. Sync Grupos
@@ -172,11 +179,15 @@ const Horarios = () => {
       if (sorted.length > 0 && !selectedGroupId) {
         setSelectedGroupId(sorted[0].id);
       }
+    }, (error) => {
+      console.error("Error syncing groups:", error);
     });
 
     // 4. Sync Materias
     const unsubMaterias = onSnapshot(collection(db, 'schools', schoolId, 'horarios_materias'), (snap) => {
       setMaterias(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error("Error syncing subjects:", error);
     });
 
     // 5. Sync Espacios
@@ -186,11 +197,15 @@ const Horarios = () => {
       if (list.length > 0 && !selectedEspacioId) {
         setSelectedEspacioId(list[0].id);
       }
+    }, (error) => {
+      console.error("Error syncing spaces:", error);
     });
 
     // 6. Sync Asignaciones
     const unsubAsignaciones = onSnapshot(collection(db, 'schools', schoolId, 'horarios_asignaciones'), (snap) => {
       setAsignaciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error("Error syncing assignments:", error);
     });
 
     // 7. Sync Generated Schedule
@@ -198,6 +213,8 @@ const Horarios = () => {
       if (snap.exists()) {
         setGeneratedSchedule(snap.data());
       }
+    }, (error) => {
+      console.error("Error syncing generated schedule:", error);
     });
 
     setLoading(false);
