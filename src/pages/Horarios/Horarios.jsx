@@ -25,6 +25,30 @@ import {
 } from 'lucide-react';
 import './Horarios.css';
 
+const SUBJECT_COLORS = [
+  '#f87171', // Rojo suave
+  '#fb923c', // Naranja suave
+  '#fbbf24', // Amarillo suave
+  '#34d399', // Verde menta
+  '#2dd4bf', // Turquesa
+  '#38bdf8', // Celeste
+  '#60a5fa', // Azul suave
+  '#818cf8', // Indigo
+  '#a78bfa', // Violeta
+  '#f472b6'  // Rosa
+];
+
+const getSubjectColor = (materiaNombre, customColor) => {
+  if (customColor) return customColor;
+  if (!materiaNombre) return '#cbd5e1';
+  let hash = 0;
+  for (let i = 0; i < materiaNombre.length; i++) {
+    hash = materiaNombre.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const idx = Math.abs(hash) % SUBJECT_COLORS.length;
+  return SUBJECT_COLORS[idx];
+};
+
 const Horarios = () => {
   const { schoolId } = useAuth();
   const { config: schoolConfig } = useConfig();
@@ -93,7 +117,8 @@ const Horarios = () => {
     prioridad: 'Media',
     restricciones: '',
     observaciones: '',
-    disponibilidad: {}
+    disponibilidad: {},
+    materiasIds: []
   });
 
   const [formGrupo, setFormGrupo] = useState({
@@ -110,7 +135,8 @@ const Horarios = () => {
     grado: '',
     horasSemanales: 3,
     espacioRequerido: 'Aula',
-    observaciones: ''
+    observaciones: '',
+    color: '#f87171'
   });
 
   const [formEspacio, setFormEspacio] = useState({
@@ -124,15 +150,23 @@ const Horarios = () => {
     docenteId: '',
     materiaId: '',
     grupoId: '',
+    grupoIds: [],
     horasSemanales: 3,
-    espacioId: ''
+    espacioId: '',
+    espacioIds: []
   });
+
+  const [showAllMateriasInAssignment, setShowAllMateriasInAssignment] = useState(false);
 
   // Schedule Viewer Filter States
   const [viewFilterMode, setViewFilterMode] = useState('grupo'); // 'grupo', 'docente', 'espacio', 'general'
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [selectedDocenteId, setSelectedDocenteId] = useState('');
   const [selectedEspacioId, setSelectedEspacioId] = useState('');
+  const [timelineViewMode, setTimelineViewMode] = useState('individual'); // 'individual', 'global'
+  const [timelineGlobalResource, setTimelineGlobalResource] = useState('grupo'); // 'grupo', 'docente', 'espacio'
+  const [hoveredDocenteId, setHoveredDocenteId] = useState(null);
+  const [hoveredMateriaId, setHoveredMateriaId] = useState(null);
 
   // Print Settings Tab
   const [printOption, setPrintOption] = useState('general'); // 'general', 'grupo', 'docente', 'espacio'
@@ -285,7 +319,8 @@ const Horarios = () => {
       prioridad: 'Media',
       restricciones: '',
       observaciones: '',
-      disponibilidad: initializeDisponibilidad()
+      disponibilidad: initializeDisponibilidad(),
+      materiasIds: []
     });
     setModalOpen(prev => ({ ...prev, docente: true }));
   };
@@ -294,7 +329,8 @@ const Horarios = () => {
     setEditItem(prev => ({ ...prev, docente }));
     setFormDocente({
       ...docente,
-      disponibilidad: docente.disponibilidad || initializeDisponibilidad()
+      disponibilidad: docente.disponibilidad || initializeDisponibilidad(),
+      materiasIds: docente.materiasIds || []
     });
     setModalOpen(prev => ({ ...prev, docente: true }));
   };
@@ -374,14 +410,18 @@ const Horarios = () => {
       grado: '',
       horasSemanales: 3,
       espacioRequerido: 'Aula',
-      observaciones: ''
+      observaciones: '',
+      color: SUBJECT_COLORS[0]
     });
     setModalOpen(prev => ({ ...prev, materia: true }));
   };
 
   const openEditMateria = (materia) => {
     setEditItem(prev => ({ ...prev, materia }));
-    setFormMateria(materia);
+    setFormMateria({
+      ...materia,
+      color: materia.color || SUBJECT_COLORS[0]
+    });
     setModalOpen(prev => ({ ...prev, materia: true }));
   };
 
@@ -449,27 +489,88 @@ const Horarios = () => {
     }
   };
 
+  const getMateriaColor = (materiaId, materiaNombre) => {
+    const mat = materias.find(m => m.id === materiaId);
+    if (mat?.color) return mat.color;
+    return getSubjectColor(materiaNombre || mat?.nombre);
+  };
+
+  // CRUD Operations: ASIGNACIONES
+  const handleDocenteChange = (docenteId) => {
+    const docObj = docentes.find(d => d.id === docenteId);
+    const docMateriasIds = docObj?.materiasIds || [];
+    
+    let nextMateriaId = '';
+    if (docMateriasIds.length > 0) {
+      nextMateriaId = docMateriasIds[0];
+    } else if (materias.length > 0) {
+      nextMateriaId = materias[0].id;
+    }
+    
+    const matObj = materias.find(m => m.id === nextMateriaId);
+    const horas = matObj ? Number(matObj.horasSemanales || 3) : 3;
+    
+    setFormAsignacion(prev => ({
+      ...prev,
+      docenteId,
+      materiaId: nextMateriaId,
+      horasSemanales: horas
+    }));
+  };
+
+  const handleMateriaChange = (materiaId) => {
+    const matObj = materias.find(m => m.id === materiaId);
+    const horas = matObj ? Number(matObj.horasSemanales || 3) : 3;
+    
+    setFormAsignacion(prev => ({
+      ...prev,
+      materiaId,
+      horasSemanales: horas
+    }));
+  };
+
   // CRUD Operations: ASIGNACIONES
   const openNewAsignacion = () => {
     setEditItem(prev => ({ ...prev, asignacion: null }));
+    setShowAllMateriasInAssignment(false);
+
+    const defaultDocenteId = docentes[0]?.id || '';
+    const defaultDocente = docentes.find(d => d.id === defaultDocenteId);
+    const docMateriasIds = defaultDocente?.materiasIds || [];
+    
+    let defaultMateriaId = '';
+    if (docMateriasIds.length > 0) {
+      defaultMateriaId = docMateriasIds[0];
+    } else if (materias.length > 0) {
+      defaultMateriaId = materias[0].id;
+    }
+    
+    const defaultMateria = materias.find(m => m.id === defaultMateriaId);
+    const defaultHoras = defaultMateria ? Number(defaultMateria.horasSemanales || 3) : 3;
+
     setFormAsignacion({
-      docenteId: docentes[0]?.id || '',
-      materiaId: materias[0]?.id || '',
+      docenteId: defaultDocenteId,
+      materiaId: defaultMateriaId,
       grupoId: grupos[0]?.id || '',
-      horasSemanales: 3,
-      espacioId: espacios[0]?.id || ''
+      grupoIds: grupos[0] ? [grupos[0].id] : [],
+      horasSemanales: defaultHoras,
+      espacioId: '',
+      espacioIds: []
     });
     setModalOpen(prev => ({ ...prev, asignacion: true }));
   };
 
   const openEditAsignacion = (asig) => {
     setEditItem(prev => ({ ...prev, asignacion: asig }));
+    setShowAllMateriasInAssignment(false);
     setFormAsignacion({
       docenteId: asig.docenteId,
       materiaId: asig.materiaId,
-      grupoId: asig.grupoId,
+      grupoId: asig.grupoId || '',
+      grupoIds: asig.grupoIds || (asig.grupoId ? [asig.grupoId] : []),
       horasSemanales: asig.horasSemanales,
-      espacioId: asig.espacioId || ''
+      espacioId: asig.espacioId || '',
+      espacioIds: asig.espacioIds || (asig.espacioId ? [asig.espacioId] : [])
     });
     setModalOpen(prev => ({ ...prev, asignacion: true }));
   };
@@ -478,19 +579,31 @@ const Horarios = () => {
     e.preventDefault();
     const docObj = docentes.find(d => d.id === formAsignacion.docenteId);
     const matObj = materias.find(m => m.id === formAsignacion.materiaId);
-    const grpObj = grupos.find(g => g.id === formAsignacion.grupoId);
-    const espObj = espacios.find(es => es.id === formAsignacion.espacioId);
+    
+    // Group name joining
+    const selectedGroups = grupos.filter(g => formAsignacion.grupoIds?.includes(g.id));
+    const grupoNombre = selectedGroups.length > 0
+      ? selectedGroups.map(g => `${g.grado}°${g.grupo}`).join(', ')
+      : 'Taller (Sin grupo)';
+
+    // Space name joining
+    const selectedSpaces = espacios.filter(es => formAsignacion.espacioIds?.includes(es.id));
+    const espacioNombre = selectedSpaces.length > 0
+      ? selectedSpaces.map(es => es.nombre).join(', ')
+      : '';
 
     const payload = {
       docenteId: formAsignacion.docenteId,
       docenteNombre: docObj ? docObj.nombre : '',
       materiaId: formAsignacion.materiaId,
       materiaNombre: matObj ? matObj.nombre : '',
-      grupoId: formAsignacion.grupoId,
-      grupoNombre: grpObj ? `${grpObj.grado}°${grpObj.grupo}` : '',
+      grupoId: formAsignacion.grupoIds?.[0] || '', // backward compatibility
+      grupoIds: formAsignacion.grupoIds || [],
+      grupoNombre,
       horasSemanales: Number(formAsignacion.horasSemanales),
-      espacioId: formAsignacion.espacioId || '',
-      espacioNombre: espObj ? espObj.nombre : ''
+      espacioId: formAsignacion.espacioIds?.[0] || '', // backward compatibility
+      espacioIds: formAsignacion.espacioIds || [],
+      espacioNombre
     };
 
     try {
@@ -538,9 +651,11 @@ const Horarios = () => {
             docenteNombre: asig.docenteNombre,
             materiaId: asig.materiaId,
             materiaNombre: asig.materiaNombre,
-            grupoId: asig.grupoId,
+            grupoId: asig.grupoIds?.[0] || asig.grupoId || '',
+            grupoIds: asig.grupoIds || (asig.grupoId ? [asig.grupoId] : []),
             grupoNombre: asig.grupoNombre,
-            espacioId: asig.espacioId || '',
+            espacioId: asig.espacioIds?.[0] || asig.espacioId || '',
+            espacioIds: asig.espacioIds || (asig.espacioId ? [asig.espacioId] : []),
             espacioNombre: asig.espacioNombre || ''
           });
         }
@@ -580,8 +695,8 @@ const Horarios = () => {
         if (availA !== availB) return availA - availB;
 
         // Aulas especiales primero
-        const spaceA = a.espacioId && espacios.find(e => e.id === a.espacioId)?.tipo !== 'Aula' ? 1 : 0;
-        const spaceB = b.espacioId && espacios.find(e => e.id === b.espacioId)?.tipo !== 'Aula' ? 1 : 0;
+        const spaceA = a.espacioIds && a.espacioIds.some(spId => espacios.find(e => e.id === spId)?.tipo !== 'Aula') ? 1 : 0;
+        const spaceB = b.espacioIds && b.espacioIds.some(spId => espacios.find(e => e.id === spId)?.tipo !== 'Aula') ? 1 : 0;
         if (spaceA !== spaceB) return spaceB - spaceA;
 
         return 0;
@@ -596,14 +711,23 @@ const Horarios = () => {
       };
 
       const isGroupBusy = (grpId, day, modIdx) => {
-        return placedSlots.some(s => s.grupoId === grpId && s.dia === day && s.moduloIndex === modIdx);
+        if (!grpId) return false;
+        return placedSlots.some(s => {
+          if (s.dia !== day || s.moduloIndex !== modIdx) return false;
+          const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
+          return otherGIds.includes(grpId);
+        });
       };
 
       const isSpaceBusy = (spcId, day, modIdx) => {
         if (!spcId) return false;
         const spcObj = espacios.find(e => e.id === spcId);
         if (!spcObj || spcObj.tipo === 'Aula') return false; // El aula común depende del grupo, no choca con otros grupos
-        return placedSlots.some(s => s.espacioId === spcId && s.dia === day && s.moduloIndex === modIdx);
+        return placedSlots.some(s => {
+          if (s.dia !== day || s.moduloIndex !== modIdx) return false;
+          const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
+          return otherSpcIds.includes(spcId);
+        });
       };
 
       const isTeacherAvailable = (docId, day, modIdx) => {
@@ -623,17 +747,53 @@ const Horarios = () => {
           for (let m = 0; m < numModulos; m++) {
             // Validar restricciones duras
             if (isTeacherBusy(slot.docenteId, day, m)) continue;
-            if (isGroupBusy(slot.grupoId, day, m)) continue;
-            if (isSpaceBusy(slot.espacioId, day, m)) continue;
+            
+            let groupBusy = false;
+            const slotGIds = slot.grupoIds || [];
+            if (slotGIds.length > 0) {
+              for (const gId of slotGIds) {
+                if (isGroupBusy(gId, day, m)) {
+                  groupBusy = true;
+                  break;
+                }
+              }
+            } else if (slot.grupoId) {
+              if (isGroupBusy(slot.grupoId, day, m)) groupBusy = true;
+            }
+            if (groupBusy) continue;
+
+            let spaceBusy = false;
+            const slotSpcIds = slot.espacioIds || [];
+            if (slotSpcIds.length > 0) {
+              for (const spId of slotSpcIds) {
+                if (isSpaceBusy(spId, day, m)) {
+                  spaceBusy = true;
+                  break;
+                }
+              }
+            } else if (slot.espacioId) {
+              if (isSpaceBusy(slot.espacioId, day, m)) spaceBusy = true;
+            }
+            if (spaceBusy) continue;
+
             if (!isTeacherAvailable(slot.docenteId, day, m)) continue;
 
             // Evaluar restricciones preferenciales
             let score = 0;
 
             // 1. Contigüidad del Grupo (evitar huecos)
-            const groupAdjacent = placedSlots.some(s => 
-              s.grupoId === slot.grupoId && s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1)
-            );
+            let groupAdjacent = false;
+            if (slotGIds.length > 0) {
+              groupAdjacent = placedSlots.some(s => 
+                s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1) &&
+                (s.grupoIds || (s.grupoId ? [s.grupoId] : [])).some(gId => slotGIds.includes(gId))
+              );
+            } else if (slot.grupoId) {
+              groupAdjacent = placedSlots.some(s => 
+                s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1) &&
+                (s.grupoId === slot.grupoId || (s.grupoIds || []).includes(slot.grupoId))
+              );
+            }
             if (groupAdjacent) score += 40;
 
             // 2. Contigüidad del Docente
@@ -643,9 +803,18 @@ const Horarios = () => {
             if (teacherAdjacent) score += 25;
 
             // 3. Distribución de materias en la semana (no apilar la misma materia en un solo día)
-            const dayMatCount = placedSlots.filter(s => 
-              s.grupoId === slot.grupoId && s.materiaId === slot.materiaId && s.dia === day
-            ).length;
+            let dayMatCount = 0;
+            if (slotGIds.length > 0) {
+              dayMatCount = placedSlots.filter(s => 
+                s.materiaId === slot.materiaId && s.dia === day &&
+                (s.grupoIds || (s.grupoId ? [s.grupoId] : [])).some(gId => slotGIds.includes(gId))
+              ).length;
+            } else if (slot.grupoId) {
+              dayMatCount = placedSlots.filter(s => 
+                s.materiaId === slot.materiaId && s.dia === day &&
+                (s.grupoId === slot.grupoId || (s.grupoIds || []).includes(slot.grupoId))
+              ).length;
+            }
             score -= dayMatCount * 50;
 
             // 4. Preferencia a primeras horas
@@ -675,7 +844,7 @@ const Horarios = () => {
       grupos.forEach(g => {
         dias.forEach(day => {
           const dayMods = placedSlots
-            .filter(s => s.grupoId === g.id && s.dia === day)
+            .filter(s => (s.grupoId === g.id || (s.grupoIds && s.grupoIds.includes(g.id))) && s.dia === day)
             .map(s => s.moduloIndex)
             .sort((a, b) => a - b);
           
@@ -689,7 +858,6 @@ const Horarios = () => {
 
       const totalPlaced = placedSlots.length;
       const totalRequested = slotsToPlace.length;
-      const unplacedPenalty = (totalRequested - totalPlaced) * 10;
       const gapPenalty = gapCount * 2;
       const qualityScore = Math.max(0, Math.min(100, Math.round(((totalPlaced / totalRequested) * 100) - gapPenalty)));
 
@@ -729,6 +897,12 @@ const Horarios = () => {
 
     const { slot, index } = draggedSlot;
     
+    if (index < 0) {
+      await handlePlacePendingSlot(slot, targetDay, targetModIdx);
+      setDraggedSlot(null);
+      return;
+    }
+
     // Evitar soltar en el mismo lugar
     if (slot.dia === targetDay && slot.moduloIndex === targetModIdx) {
       setDraggedSlot(null);
@@ -747,24 +921,32 @@ const Horarios = () => {
     }
 
     // Comprobar cruce de grupo
-    const grpClash = generatedSchedule.slots.some((s, idx) => 
-      idx !== index && s.grupoId === slot.grupoId && s.dia === targetDay && s.moduloIndex === targetModIdx
-    );
+    const slotGIds = slot.grupoIds || (slot.grupoId ? [slot.grupoId] : []);
+    const grpClash = generatedSchedule.slots.some((s, idx) => {
+      if (idx === index) return false;
+      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
+      const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
+      return slotGIds.some(gId => gId && otherGIds.includes(gId));
+    });
     if (grpClash) {
-      errors.push(`El grupo ${slot.grupoNombre} ya tiene clase asignada en este módulo.`);
+      errors.push(`El grupo (o uno de los grupos asociados) ya tiene clase asignada en este módulo.`);
     }
 
     // Comprobar cruce de espacio
-    if (slot.espacioId) {
-      const spcObj = espacios.find(sp => sp.id === slot.espacioId);
-      if (spcObj && spcObj.tipo !== 'Aula') {
-        const spcClash = generatedSchedule.slots.some((s, idx) => 
-          idx !== index && s.espacioId === slot.espacioId && s.dia === targetDay && s.moduloIndex === targetModIdx
-        );
-        if (spcClash) {
-          errors.push(`El espacio ${slot.espacioNombre} ya está reservado en este módulo.`);
-        }
-      }
+    const slotSpcIds = slot.espacioIds || (slot.espacioId ? [slot.espacioId] : []);
+    const spcClash = generatedSchedule.slots.some((s, idx) => {
+      if (idx === index) return false;
+      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
+      const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
+      return slotSpcIds.some(spId => {
+        if (!spId) return false;
+        const spcObj = espacios.find(sp => sp.id === spId);
+        if (!spcObj || spcObj.tipo === 'Aula') return false;
+        return otherSpcIds.includes(spId);
+      });
+    });
+    if (spcClash) {
+      errors.push(`El espacio (o uno de los espacios reservados) ya está ocupado en este módulo.`);
     }
 
     // Comprobar disponibilidad de docente
@@ -784,7 +966,9 @@ const Horarios = () => {
     updatedSlots[index] = {
       ...slot,
       dia: targetDay,
-      moduloIndex: targetModIdx
+      moduloIndex: targetModIdx,
+      grupoIds: slotGIds,
+      espacioIds: slotSpcIds
     };
 
     // Recalcular calidad y huecos
@@ -792,7 +976,7 @@ const Horarios = () => {
     grupos.forEach(g => {
       config.diasSemana.forEach(day => {
         const dayMods = updatedSlots
-          .filter(s => s.grupoId === g.id && s.dia === day)
+          .filter(s => (s.grupoId === g.id || (s.grupoIds && s.grupoIds.includes(g.id))) && s.dia === day)
           .map(s => s.moduloIndex)
           .sort((a, b) => a - b);
         
@@ -834,16 +1018,26 @@ const Horarios = () => {
     const docClash = generatedSchedule.slots.some(s => s.docenteId === slot.docenteId && s.dia === targetDay && s.moduloIndex === targetModIdx);
     if (docClash) errors.push(`El docente ${slot.docenteNombre} ya está ocupado.`);
     
-    const grpClash = generatedSchedule.slots.some(s => s.grupoId === slot.grupoId && s.dia === targetDay && s.moduloIndex === targetModIdx);
-    if (grpClash) errors.push(`El grupo ${slot.grupoNombre} ya tiene clase.`);
+    const slotGIds = slot.grupoIds || (slot.grupoId ? [slot.grupoId] : []);
+    const grpClash = generatedSchedule.slots.some(s => {
+      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
+      const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
+      return slotGIds.some(gId => gId && otherGIds.includes(gId));
+    });
+    if (grpClash) errors.push(`El grupo (o uno de los grupos asociados) ya tiene clase.`);
     
-    if (slot.espacioId) {
-      const spcObj = espacios.find(sp => sp.id === slot.espacioId);
-      if (spcObj && spcObj.tipo !== 'Aula') {
-        const spcClash = generatedSchedule.slots.some(s => s.espacioId === slot.espacioId && s.dia === targetDay && s.moduloIndex === targetModIdx);
-        if (spcClash) errors.push(`El espacio ${slot.espacioNombre} ya está ocupado.`);
-      }
-    }
+    const slotSpcIds = slot.espacioIds || (slot.espacioId ? [slot.espacioId] : []);
+    const spcClash = generatedSchedule.slots.some(s => {
+      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
+      const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
+      return slotSpcIds.some(spId => {
+        if (!spId) return false;
+        const spcObj = espacios.find(sp => sp.id === spId);
+        if (!spcObj || spcObj.tipo === 'Aula') return false;
+        return otherSpcIds.includes(spId);
+      });
+    });
+    if (spcClash) errors.push(`El espacio ya está ocupado.`);
 
     const docObj = docentes.find(d => d.id === slot.docenteId);
     if (docObj?.disponibilidad?.[targetDay]?.[targetModIdx] === false) {
@@ -859,7 +1053,9 @@ const Horarios = () => {
     const newPlaced = {
       ...slot,
       dia: targetDay,
-      moduloIndex: targetModIdx
+      moduloIndex: targetModIdx,
+      grupoIds: slotGIds,
+      espacioIds: slotSpcIds
     };
 
     const newSlots = [...generatedSchedule.slots, newPlaced];
@@ -878,6 +1074,153 @@ const Horarios = () => {
       await setDoc(doc(db, 'schools', schoolId, 'horarios_generados', 'current'), updatedSchedule);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleDropGlobal = async (e, targetRowId, targetDay, targetModIdx, resourceType) => {
+    e.preventDefault();
+    if (!draggedSlot) return;
+    
+    const { slot, index } = draggedSlot;
+    
+    // Create updated copy
+    const updatedSlot = { ...slot };
+    if (resourceType === 'grupo') {
+      const gObj = grupos.find(g => g.id === targetRowId);
+      if (gObj) {
+        updatedSlot.grupoId = targetRowId;
+        updatedSlot.grupoIds = [targetRowId];
+        updatedSlot.grupoNombre = `${gObj.grado}°${gObj.grupo}`;
+      }
+    } else if (resourceType === 'docente') {
+      const dObj = docentes.find(d => d.id === targetRowId);
+      if (dObj) {
+        updatedSlot.docenteId = targetRowId;
+        updatedSlot.docenteNombre = dObj.nombre;
+      }
+    } else if (resourceType === 'espacio') {
+      const esObj = espacios.find(es => es.id === targetRowId);
+      if (esObj) {
+        updatedSlot.espacioId = targetRowId;
+        updatedSlot.espacioIds = [targetRowId];
+        updatedSlot.espacioNombre = esObj.nombre;
+      } else if (targetRowId === '') {
+        updatedSlot.espacioId = '';
+        updatedSlot.espacioIds = [];
+        updatedSlot.espacioNombre = 'Aula';
+      }
+    }
+
+    // 1. Validar conflictos en caliente
+    const errors = [];
+    
+    // Comprobar cruce de docente
+    const docClash = generatedSchedule.slots.some((s, idx) => 
+      idx !== index && s.docenteId === updatedSlot.docenteId && s.dia === targetDay && s.moduloIndex === targetModIdx
+    );
+    if (docClash) {
+      errors.push(`El docente ${updatedSlot.docenteNombre} ya está ocupado en este módulo.`);
+    }
+
+    // Comprobar cruce de grupo
+    const slotGIds = updatedSlot.grupoIds || (updatedSlot.grupoId ? [updatedSlot.grupoId] : []);
+    const grpClash = generatedSchedule.slots.some((s, idx) => {
+      if (idx === index) return false;
+      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
+      const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
+      return slotGIds.some(gId => gId && otherGIds.includes(gId));
+    });
+    if (grpClash) {
+      errors.push(`El grupo ya tiene clase asignada en este módulo.`);
+    }
+
+    // Comprobar cruce de espacio
+    const slotSpcIds = updatedSlot.espacioIds || (updatedSlot.espacioId ? [updatedSlot.espacioId] : []);
+    const spcClash = generatedSchedule.slots.some((s, idx) => {
+      if (idx === index) return false;
+      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
+      const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
+      return slotSpcIds.some(spId => {
+        if (!spId) return false;
+        const spcObj = espacios.find(sp => sp.id === spId);
+        if (!spcObj || spcObj.tipo === 'Aula') return false;
+        return otherSpcIds.includes(spId);
+      });
+    });
+    if (spcClash) {
+      errors.push(`El espacio ya está ocupado en este módulo.`);
+    }
+
+    // Comprobar disponibilidad de docente
+    const docObj = docentes.find(d => d.id === updatedSlot.docenteId);
+    if (docObj?.disponibilidad?.[targetDay]?.[targetModIdx] === false) {
+      errors.push(`El docente ${updatedSlot.docenteNombre} no está disponible en este módulo.`);
+    }
+
+    if (errors.length > 0) {
+      setConflictWarning(errors.join(' '));
+      setDraggedSlot(null);
+      return;
+    }
+
+    // 2. Modificar en el estado local
+    const newSlots = [...generatedSchedule.slots];
+    const updatedPlaced = {
+      ...updatedSlot,
+      dia: targetDay,
+      moduloIndex: targetModIdx,
+      grupoIds: slotGIds,
+      espacioIds: slotSpcIds
+    };
+
+    if (index >= 0) {
+      newSlots[index] = updatedPlaced;
+    } else {
+      newSlots.push(updatedPlaced);
+    }
+
+    const newPending = index < 0 
+      ? generatedSchedule.horasPendientes.filter(h => h.id !== slot.id)
+      : generatedSchedule.horasPendientes;
+
+    // Recalcular calidad y huecos
+    let gapCount = 0;
+    grupos.forEach(g => {
+      config.diasSemana.forEach(day => {
+        const dayMods = newSlots
+          .filter(s => (s.grupoId === g.id || (s.grupoIds && s.grupoIds.includes(g.id))) && s.dia === day)
+          .map(s => s.moduloIndex)
+          .sort((a, b) => a - b);
+        
+        if (dayMods.length > 1) {
+          for (let idx = dayMods[0]; idx < dayMods[dayMods.length - 1]; idx++) {
+            if (!dayMods.includes(idx)) gapCount++;
+          }
+        }
+      });
+    });
+
+    const totalPlaced = newSlots.length;
+    const totalRequested = asignaciones.reduce((acc, curr) => acc + Number(curr.horasSemanales || 1), 0);
+    const qualityScore = Math.max(0, Math.min(100, Math.round(((totalPlaced / totalRequested) * 100) - (gapCount * 2))));
+
+    const updatedSchedule = {
+      ...generatedSchedule,
+      slots: newSlots,
+      horasPendientes: newPending,
+      quality: qualityScore,
+      conflicts: [],
+      updatedAt: new Date()
+    };
+
+    setGeneratedSchedule(updatedSchedule);
+    setDraggedSlot(null);
+
+    // Guardar cambios en Firestore
+    try {
+      await setDoc(doc(db, 'schools', schoolId, 'horarios_generados', 'current'), updatedSchedule);
+    } catch (e) {
+      console.error('Error al guardar edición manual global:', e);
     }
   };
 
@@ -1185,6 +1528,37 @@ const Horarios = () => {
                           <label>Observaciones</label>
                           <input type="text" value={formDocente.observaciones} onChange={e => setFormDocente(prev => ({ ...prev, observaciones: e.target.value }))} />
                         </div>
+                        <div className="form-group" style={{ gridColumn: 'span 3' }}>
+                          <label>Materias que Imparte (Selecciona las materias registradas para este docente)</label>
+                          <div className="checkbox-scroll-list">
+                            {materias.map(m => {
+                              const isChecked = formDocente.materiasIds?.includes(m.id);
+                              return (
+                                <label key={m.id} className="checkbox-item">
+                                  <input 
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setFormDocente(prev => {
+                                        const list = prev.materiasIds ? [...prev.materiasIds] : [];
+                                        if (checked) {
+                                          if (!list.includes(m.id)) list.push(m.id);
+                                        } else {
+                                          const idx = list.indexOf(m.id);
+                                          if (idx !== -1) list.splice(idx, 1);
+                                        }
+                                        return { ...prev, materiasIds: list };
+                                      });
+                                    }}
+                                  />
+                                  <span>{m.nombre} ({m.grado}° grado)</span>
+                                </label>
+                              );
+                            })}
+                            {materias.length === 0 && <span className="text-muted">No hay materias registradas en el catálogo.</span>}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Verfügbarkeits-Tabelle */}
@@ -1435,6 +1809,29 @@ const Horarios = () => {
                         </select>
                       </div>
                       <div className="form-group">
+                        <label>Color Identificador *</label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                          {SUBJECT_COLORS.map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setFormMateria(prev => ({ ...prev, color: c }))}
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: c,
+                                border: formMateria.color === c ? '2.5px solid #1e293b' : '1.5px solid #cbd5e1',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                transform: formMateria.color === c ? 'scale(1.15)' : 'none',
+                                boxShadow: formMateria.color === c ? '0 0 8px rgba(0,0,0,0.15)' : 'none'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="form-group">
                         <label>Observaciones</label>
                         <input type="text" value={formMateria.observaciones} onChange={e => setFormMateria(prev => ({ ...prev, observaciones: e.target.value }))} />
                       </div>
@@ -1606,294 +2003,671 @@ const Horarios = () => {
               </table>
 
               {/* MODAL REGISTRO ASIGNACIÓN */}
-              {modalOpen.asignacion && (
-                <div className="modal-overlay">
-                  <div className="modal-content">
-                    <div className="modal-header">
-                      <h3>{editItem.asignacion ? 'Editar Asignación' : 'Nueva Asignación'}</h3>
-                      <button className="btn-close" onClick={() => setModalOpen(prev => ({ ...prev, asignacion: false }))}>×</button>
+              {modalOpen.asignacion && (() => {
+                const selectedDocenteObj = docentes.find(d => d.id === formAsignacion.docenteId);
+                const totalDocenteHours = selectedDocenteObj ? Number(selectedDocenteObj.horasAsignadas || 0) : 0;
+                const assignedHours = asignaciones
+                  .filter(a => a.docenteId === formAsignacion.docenteId && (!editItem.asignacion || a.id !== editItem.asignacion.id))
+                  .reduce((sum, a) => sum + Number(a.horasSemanales || 0), 0);
+                const newTotalHours = assignedHours + Number(formAsignacion.horasSemanales || 0);
+                const isOverHours = selectedDocenteObj && totalDocenteHours > 0 && newTotalHours > totalDocenteHours;
+                const docenteMateriasIds = selectedDocenteObj?.materiasIds || [];
+                const filteredMateriasForDocente = showAllMateriasInAssignment 
+                  ? materias 
+                  : materias.filter(m => docenteMateriasIds.includes(m.id));
+
+                return (
+                  <div className="modal-overlay">
+                    <div className="modal-content modal-large" style={{ maxWidth: '650px' }}>
+                      <div className="modal-header">
+                        <h3>{editItem.asignacion ? 'Editar Asignación' : 'Nueva Asignación'}</h3>
+                        <button className="btn-close" onClick={() => setModalOpen(prev => ({ ...prev, asignacion: false }))}>×</button>
+                      </div>
+                      <form onSubmit={handleSaveAsignacion}>
+                        {/* Carga del Docente en Tiempo Real */}
+                        {selectedDocenteObj && totalDocenteHours > 0 && (
+                          <div style={{ background: '#f8fafc', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                              <span>Carga de <strong>{selectedDocenteObj.nombre}</strong>:</span>
+                              <span><strong>{assignedHours} / {totalDocenteHours} hrs</strong> asignadas</span>
+                            </div>
+                            <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                              <div 
+                                style={{ 
+                                  height: '100%', 
+                                  width: `${Math.min(100, (assignedHours / totalDocenteHours) * 100)}%`, 
+                                  background: isOverHours ? '#ef4444' : '#10b981', 
+                                  transition: 'width 0.3s' 
+                                }} 
+                              />
+                            </div>
+                            {isOverHours && (
+                              <div style={{ color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', marginTop: '6px', fontWeight: '500' }}>
+                                <AlertCircle size={14} />
+                                <span>Con esta asignación ({formAsignacion.horasSemanales} hrs) sumará {newTotalHours} hrs, superando su plaza ({totalDocenteHours} hrs).</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="config-form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+                          <div className="form-group">
+                            <label>Docente *</label>
+                            <select value={formAsignacion.docenteId} onChange={e => handleDocenteChange(e.target.value)} required>
+                              {docentes.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                            </select>
+                          </div>
+                          
+                          <div className="form-group">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <label style={{ margin: 0 }}>Materia *</label>
+                              {selectedDocenteObj?.materiasIds?.length > 0 && (
+                                <label style={{ margin: 0, fontWeight: 'normal', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={showAllMateriasInAssignment} 
+                                    onChange={e => setShowAllMateriasInAssignment(e.target.checked)} 
+                                  />
+                                  Mostrar todas
+                                </label>
+                              )}
+                            </div>
+                            <select value={formAsignacion.materiaId} onChange={e => handleMateriaChange(e.target.value)} required>
+                              {filteredMateriasForDocente.map(m => <option key={m.id} value={m.id}>{m.nombre} ({m.grado}° grado)</option>)}
+                              {filteredMateriasForDocente.length === 0 && <option value="">No hay materias elegibles</option>}
+                            </select>
+                            {!showAllMateriasInAssignment && selectedDocenteObj && docenteMateriasIds.length === 0 && (
+                              <div style={{ fontSize: '0.8rem', color: '#b45309', marginTop: '4px' }}>
+                                El docente no tiene materias en su perfil. <span style={{ textDecoration: 'underline', cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => setShowAllMateriasInAssignment(true)}>Mostrar todas</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Horas Semanales *</label>
+                            <input type="number" value={formAsignacion.horasSemanales} onChange={e => setFormAsignacion(prev => ({ ...prev, horasSemanales: Number(e.target.value) }))} min={1} required />
+                          </div>
+
+                          {/* Selección de Grupos */}
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <label style={{ margin: 0 }}>Grupo(s) de Destino *</label>
+                              <label style={{ margin: 0, fontWeight: 'normal', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <input 
+                                  type="checkbox"
+                                  checked={!formAsignacion.grupoIds || formAsignacion.grupoIds.length === 0}
+                                  onChange={(e) => {
+                                    const isTaller = e.target.checked;
+                                    setFormAsignacion(prev => ({
+                                      ...prev,
+                                      grupoIds: isTaller ? [] : (grupos[0] ? [grupos[0].id] : []),
+                                      grupoId: isTaller ? '' : (grupos[0]?.id || '')
+                                    }));
+                                  }}
+                                />
+                                Es un Taller (Sin grupo específico)
+                              </label>
+                            </div>
+                            
+                            {formAsignacion.grupoIds && formAsignacion.grupoIds.length > 0 ? (
+                              <div className="checkbox-scroll-list">
+                                {grupos.map(g => {
+                                  const isChecked = formAsignacion.grupoIds?.includes(g.id);
+                                  return (
+                                    <label key={g.id} className="checkbox-item">
+                                      <input 
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                          const checked = e.target.checked;
+                                          setFormAsignacion(prev => {
+                                            const list = prev.grupoIds ? [...prev.grupoIds] : [];
+                                            if (checked) {
+                                              if (!list.includes(g.id)) list.push(g.id);
+                                            } else {
+                                              const idx = list.indexOf(g.id);
+                                              if (idx !== -1) list.splice(idx, 1);
+                                            }
+                                            return {
+                                              ...prev,
+                                              grupoIds: list,
+                                              grupoId: list[0] || ''
+                                            };
+                                          });
+                                        }}
+                                      />
+                                      <span>{g.grado}°{g.grupo} - {g.turno}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div style={{ padding: '16px', background: '#f8fafc', border: '1.5px dashed var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                                Configurado como Taller (Sin grupo específico). No ocupará el horario de ningún grupo en particular.
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Selección de Espacios */}
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Espacio(s) Requerido(s)</label>
+                            <div className="checkbox-scroll-list">
+                              {espacios.map(es => {
+                                const isChecked = formAsignacion.espacioIds?.includes(es.id);
+                                return (
+                                  <label key={es.id} className="checkbox-item">
+                                    <input 
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setFormAsignacion(prev => {
+                                          const list = prev.espacioIds ? [...prev.espacioIds] : [];
+                                          if (checked) {
+                                            if (!list.includes(es.id)) list.push(es.id);
+                                          } else {
+                                            const idx = list.indexOf(es.id);
+                                            if (idx !== -1) list.splice(idx, 1);
+                                          }
+                                          return {
+                                            ...prev,
+                                            espacioIds: list,
+                                            espacioId: list[0] || ''
+                                          };
+                                        });
+                                      }}
+                                    />
+                                    <span>{es.nombre} ({es.tipo})</span>
+                                  </label>
+                                );
+                              })}
+                              {espacios.length === 0 && <span className="text-muted">No hay espacios registrados.</span>}
+                            </div>
+                            <small className="text-muted" style={{ marginTop: '4px', display: 'block' }}>Si no se selecciona ninguno, se asume Aula común.</small>
+                          </div>
+                        </div>
+
+                        <div className="modal-footer" style={{ marginTop: '1.5rem' }}>
+                          <button type="button" className="btn-secondary" onClick={() => setModalOpen(prev => ({ ...prev, asignacion: false }))}>Cancelar</button>
+                          <button type="submit" className="btn-primary">Guardar Asignación</button>
+                        </div>
+                      </form>
                     </div>
-                    <form onSubmit={handleSaveAsignacion}>
-                      <div className="form-group">
-                        <label>Docente *</label>
-                        <select value={formAsignacion.docenteId} onChange={e => setFormAsignacion(prev => ({ ...prev, docenteId: e.target.value }))} required>
-                          {docentes.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Materia *</label>
-                        <select value={formAsignacion.materiaId} onChange={e => setFormAsignacion(prev => ({ ...prev, materiaId: e.target.value }))} required>
-                          {materias.map(m => <option key={m.id} value={m.id}>{m.nombre} ({m.grado}° grado)</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Grupo de Destino *</label>
-                        <select value={formAsignacion.grupoId} onChange={e => setFormAsignacion(prev => ({ ...prev, grupoId: e.target.value }))} required>
-                          {grupos.map(g => <option key={g.id} value={g.id}>{g.grado}°{g.grupo} - {g.turno}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Horas Semanales *</label>
-                        <input type="number" value={formAsignacion.horasSemanales} onChange={e => setFormAsignacion(prev => ({ ...prev, horasSemanales: Number(e.target.value) }))} min={1} required />
-                      </div>
-                      <div className="form-group">
-                        <label>Espacio Requerido</label>
-                        <select value={formAsignacion.espacioId} onChange={e => setFormAsignacion(prev => ({ ...prev, espacioId: e.target.value }))}>
-                          <option value="">Ninguno (Aula común)</option>
-                          {espacios.map(es => <option key={es.id} value={es.id}>{es.nombre} ({es.tipo})</option>)}
-                        </select>
-                      </div>
-                      <div className="modal-footer">
-                        <button type="button" className="btn-secondary" onClick={() => setModalOpen(prev => ({ ...prev, asignacion: false }))}>Cancelar</button>
-                        <button type="submit" className="btn-primary">Guardar Asignación</button>
-                      </div>
-                    </form>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
           {/* ======================================= */}
           {/* TAB 7: GENERADOR DE HORARIOS & RESULTADO */}
           {/* ======================================= */}
-          {activeTab === 'generador' && (
-            <div>
-              <div className="tab-header" style={{ border: 'none', marginBottom: '1.5rem', paddingBottom: 0 }}>
-                <div>
-                  <h2>Generador Automático de Horarios</h2>
-                  <p className="tab-header-description">Calcula o modifica manualmente los horarios escolares libres de conflictos.</p>
-                </div>
-              </div>
+          {activeTab === 'generador' && (() => {
+            // Build the global columns flat array
+            const globalColumns = [];
+            config.diasSemana.forEach(day => {
+              for (let m = 0; m < config.numModulos; m++) {
+                globalColumns.push({ day, modIdx: m });
+              }
+            });
 
-              {/* Botón principal del generador */}
-              <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button 
-                  onClick={handleAutoGenerateSchedule} 
-                  className="btn-primary" 
-                  style={{ gap: 8, padding: '12px 24px', fontSize: '1.05rem' }} 
-                  disabled={saving || asignaciones.length === 0}
-                >
-                  <Sparkles size={20} />
-                  {saving ? 'Generando Horarios...' : 'GENERAR HORARIOS AUTOMÁTICAMENTE'}
-                </button>
-
-                {generatedSchedule.updatedAt && (
-                  <small className="text-muted">
-                    Última generación: {new Date(generatedSchedule.updatedAt.seconds * 1000).toLocaleString('es-MX')}
-                  </small>
-                )}
-              </div>
-
-              {/* Calidad del Horario */}
-              {generatedSchedule.slots.length > 0 && (
-                <div>
-                  <div className="generator-status-panel">
-                    <div className="quality-card" style={{ '--q-color': generatedSchedule.quality > 85 ? '#10b981' : generatedSchedule.quality > 60 ? '#f59e0b' : '#ef4444', '--q-val': generatedSchedule.quality }}>
-                      <div className="quality-progress-circle">
-                        <span className="quality-value-text">{generatedSchedule.quality}%</span>
+            return (
+              <div className="workspace-container">
+                {/* 1. Left Sidebar Panels */}
+                <div className="workspace-sidebar">
+                  {/* AI Sparkle Generator Action Card */}
+                  <div className="workspace-card generator-action-card">
+                    <h3>AI Generador de Horarios</h3>
+                    <p className="card-desc">Calcula un acomodo óptimo y libre de conflictos en segundos.</p>
+                    
+                    <button 
+                      onClick={handleAutoGenerateSchedule} 
+                      className={`btn-primary ai-generate-btn ${saving ? 'loading' : ''}`}
+                      disabled={saving || asignaciones.length === 0}
+                    >
+                      <Sparkles size={18} className="sparkle-icon" />
+                      {saving ? 'Generando Horarios...' : 'GENERAR CON INTELIGENCIA ARTIFICIAL'}
+                    </button>
+                    
+                    {generatedSchedule.updatedAt && (
+                      <div className="last-generated-time">
+                        Última corrida: {new Date(generatedSchedule.updatedAt.seconds * 1000).toLocaleString('es-MX')}
                       </div>
-                      <div className="quality-info">
-                        <span className="quality-title">Calidad del Horario</span>
-                        <span className="quality-score">
-                          {generatedSchedule.quality > 85 ? 'Excelente' : generatedSchedule.quality > 60 ? 'Aceptable' : 'Con Gaps / Pendientes'}
-                        </span>
-                      </div>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="quality-card" style={{ flex: 1.5 }}>
-                      <div style={{ width: '100%' }}>
-                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Resumen del Horario</h4>
-                        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                            <strong>Horas Colocadas:</strong> {generatedSchedule.slots.length} horas
-                          </p>
-                          <p style={{ margin: 0, fontSize: '0.9rem', color: generatedSchedule.horasPendientes.length > 0 ? '#b45309' : '#047857' }}>
-                            <strong>Horas Pendientes:</strong> {generatedSchedule.horasPendientes.length} horas
-                          </p>
-                          <p style={{ margin: 0, fontSize: '0.9rem', color: '#047857' }}>
-                            <strong>Conflictos Duros:</strong> 0 (Garantizado)
-                          </p>
+                  {/* Quality KPI Card */}
+                  {generatedSchedule.slots.length > 0 && (
+                    <div className="workspace-card quality-kpi-card">
+                      <div className="kpi-score-header">
+                        <div className="kpi-circle" style={{ 
+                          '--q-color': generatedSchedule.quality > 85 ? '#10b981' : generatedSchedule.quality > 60 ? '#f59e0b' : '#ef4444', 
+                          '--q-val': generatedSchedule.quality 
+                        }}>
+                          <span className="kpi-value">{generatedSchedule.quality}%</span>
+                        </div>
+                        <div className="kpi-info">
+                          <span className="kpi-label">Eficiencia Escolar</span>
+                          <span className="kpi-status">
+                            {generatedSchedule.quality > 85 ? 'Excelente' : generatedSchedule.quality > 60 ? 'Aceptable' : 'Con Gaps / Pendientes'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="kpi-details-list">
+                        <div className="kpi-detail-item">
+                          <span>Colocadas:</span>
+                          <strong>{generatedSchedule.slots.length} hrs</strong>
+                        </div>
+                        <div className="kpi-detail-item" style={{ color: generatedSchedule.horasPendientes.length > 0 ? '#b45309' : '#047857' }}>
+                          <span>Pendientes:</span>
+                          <strong>{generatedSchedule.horasPendientes.length} hrs</strong>
                         </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Advertencia de conflicto manual */}
-                  {conflictWarning && (
-                    <div className="conflicts-panel">
-                      <div className="conflicts-header">
-                        <AlertCircle size={18} />
-                        <span>Conflicto Detectado: No se pudo realizar el movimiento</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d' }}>{conflictWarning}</p>
-                    </div>
                   )}
 
-                  {/* Panel de Horas Pendientes */}
-                  {generatedSchedule.horasPendientes.length > 0 && (
-                    <div className="pending-hours-badge">
-                      <AlertCircle size={18} className="text-warning" />
-                      <div>
-                        <strong>Horas no colocadas ({generatedSchedule.horasPendientes.length}):</strong> Arrastra estas materias a un espacio vacío en la cuadrícula para colocarlas manualmente.
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
-                          {generatedSchedule.horasPendientes.map((s, idx) => (
-                            <div 
-                              key={s.id} 
-                              className="timetable-class-card" 
-                              style={{ borderLeftColor: '#f59e0b', background: '#fffbeb', border: '1px solid #fde68a', cursor: 'pointer', padding: '6px 8px' }}
-                              onClick={() => {
-                                const day = prompt(`Escribe el día para colocar (${config.diasSemana.join(', ')}):`);
-                                if (!day || !config.diasSemana.includes(day)) return;
-                                const mod = prompt(`Escribe el número del módulo (1 a ${config.numModulos}):`);
-                                const modIdx = Number(mod) - 1;
-                                if (isNaN(modIdx) || modIdx < 0 || modIdx >= config.numModulos) return;
-                                handlePlacePendingSlot(s, day, modIdx);
-                              }}
-                            >
-                              <strong>{s.materiaNombre}</strong>
-                              <span style={{ fontSize: '0.7rem' }}>{s.grupoNombre} | {s.docenteNombre}</span>
+                  {/* Dock de Fichas Pendientes */}
+                  <div className="workspace-card pending-dock-card">
+                    <div className="pending-dock-header">
+                      <h3>Fichas Sin Colocar</h3>
+                      <span className="pending-count-badge">{generatedSchedule.horasPendientes.length}</span>
+                    </div>
+                    <p className="card-desc">Arrastra estas tarjetas de materias directamente a la cuadrícula para programarlas.</p>
+                    
+                    <div className="pending-cards-scroll-area">
+                      {generatedSchedule.horasPendientes.map((s, idx) => {
+                        const matColor = getMateriaColor(s.materiaId, s.materiaNombre);
+                        return (
+                          <div 
+                            key={s.id} 
+                            className="pending-card" 
+                            style={{ 
+                              borderLeftColor: matColor,
+                              '--subject-color-light': `${matColor}15`
+                            }}
+                            draggable
+                            onDragStart={() => handleDragStart(s, -1 - idx)}
+                          >
+                            <div className="p-card-header">
+                              <span className="p-card-subject" title={s.materiaNombre}>{s.materiaNombre}</span>
                             </div>
-                          ))}
+                            <div className="p-card-body">
+                              <span className="p-card-meta">{s.grupoNombre || 'Taller'}</span>
+                              <span className="p-card-teacher" title={s.docenteNombre}>{s.docenteNombre}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {generatedSchedule.horasPendientes.length === 0 && (
+                        <div className="pending-empty-state">
+                          <CheckCircle2 size={32} className="text-success" />
+                          <span>¡Todas las horas han sido colocadas!</span>
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Selector de Horario a Visualizar */}
-                  <div className="schedule-view-controls">
-                    <div className="schedule-view-modes">
-                      <button className={`schedule-view-mode-btn ${viewFilterMode === 'grupo' ? 'active' : ''}`} onClick={() => setViewFilterMode('grupo')}>
-                        Por Grupo
-                      </button>
-                      <button className={`schedule-view-mode-btn ${viewFilterMode === 'docente' ? 'active' : ''}`} onClick={() => setViewFilterMode('docente')}>
-                        Por Docente
-                      </button>
-                      <button className={`schedule-view-mode-btn ${viewFilterMode === 'espacio' ? 'active' : ''}`} onClick={() => setViewFilterMode('espacio')}>
-                        Por Espacio
-                      </button>
-                    </div>
-
-                    <div className="schedule-view-filter">
-                      {viewFilterMode === 'grupo' && (
-                        <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={{ padding: '6px 12px', borderRadius: '6px' }}>
-                          {grupos.map(g => <option key={g.id} value={g.id}>Grupo: {g.grado}°{g.grupo} - {g.turno}</option>)}
-                        </select>
-                      )}
-                      {viewFilterMode === 'docente' && (
-                        <select value={selectedDocenteId} onChange={e => setSelectedDocenteId(e.target.value)} style={{ padding: '6px 12px', borderRadius: '6px' }}>
-                          {docentes.map(d => <option key={d.id} value={d.id}>Docente: {d.nombre}</option>)}
-                        </select>
-                      )}
-                      {viewFilterMode === 'espacio' && (
-                        <select value={selectedEspacioId} onChange={e => setSelectedEspacioId(e.target.value)} style={{ padding: '6px 12px', borderRadius: '6px' }}>
-                          {espacios.map(es => <option key={es.id} value={es.id}>Espacio: {es.nombre} ({es.tipo})</option>)}
-                        </select>
                       )}
                     </div>
                   </div>
 
-                  {/* Cuadrícula Horaria Semanal */}
-                  <div className="timetable-wrapper">
-                    <table className="timetable-grid" id="main-timetable-grid">
-                      <thead>
-                        <tr>
-                          <th className="time-column">Módulo</th>
-                          {config.diasSemana.map(d => <th key={d}>{d}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Array(config.numModulos).fill(0).map((_, modIdx) => {
-                          const timeRange = getSlotTimeRange(modIdx);
-                          const [startH] = timeRange.split(':').map(Number);
+                  {/* Zona de Retorno/Eliminación */}
+                  {draggedSlot && draggedSlot.index >= 0 && (
+                    <div 
+                      className="trash-drop-zone"
+                      onDragOver={handleDragOver}
+                      onDrop={() => {
+                        handleRemovePlacedSlot(draggedSlot.index);
+                        setDraggedSlot(null);
+                      }}
+                    >
+                      <Trash2 size={24} />
+                      <span>Arrastra aquí para quitar de la cuadrícula</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Main Workspace Area */}
+                <div className="workspace-main">
+                  {/* Workspace Tab Header & Switchers */}
+                  <div className="workspace-toolbar">
+                    <div className="toolbar-section">
+                      <span className="toolbar-title">Vista del Tablero:</span>
+                      <div className="toolbar-btn-group">
+                        <button 
+                          className={`toolbar-btn ${timelineViewMode === 'individual' ? 'active' : ''}`}
+                          onClick={() => setTimelineViewMode('individual')}
+                        >
+                          Ficha Individual
+                        </button>
+                        <button 
+                          className={`toolbar-btn ${timelineViewMode === 'global' ? 'active' : ''}`}
+                          onClick={() => setTimelineViewMode('global')}
+                        >
+                          Vista Global aSc
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Selector de filtros según modo activo */}
+                    <div className="toolbar-section">
+                      {timelineViewMode === 'individual' ? (
+                        <>
+                          <div className="toolbar-btn-group" style={{ marginRight: '10px' }}>
+                            <button 
+                              className={`toolbar-btn-sm ${viewFilterMode === 'grupo' ? 'active' : ''}`}
+                              onClick={() => setViewFilterMode('grupo')}
+                            >
+                              Grupo
+                            </button>
+                            <button 
+                              className={`toolbar-btn-sm ${viewFilterMode === 'docente' ? 'active' : ''}`}
+                              onClick={() => setViewFilterMode('docente')}
+                            >
+                              Docente
+                            </button>
+                            <button 
+                              className={`toolbar-btn-sm ${viewFilterMode === 'espacio' ? 'active' : ''}`}
+                              onClick={() => setViewFilterMode('espacio')}
+                            >
+                              Espacio
+                            </button>
+                          </div>
                           
-                          const isRecessTime = modIdx === 3; // Receso visual después del 3er módulo
-                          
-                          return (
-                            <React.Fragment key={modIdx}>
-                              {isRecessTime && (
-                                <tr className="recess-row">
-                                  <td>RECESO</td>
-                                  <td colSpan={config.diasSemana.length}>
-                                    RECESO ESCOLAR ({config.recesoInicio} - {config.recesoFin})
-                                  </td>
-                                </tr>
-                              )}
-                              <tr>
-                                <td className="text-center" style={{ background: '#f8fafc' }}>
-                                  <strong>Módulo {modIdx + 1}</strong>
-                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>{timeRange}</div>
+                          <div className="toolbar-filter-select">
+                            {viewFilterMode === 'grupo' && (
+                              <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)}>
+                                {grupos.map(g => <option key={g.id} value={g.id}>{g.grado}°{g.grupo} - {g.turno}</option>)}
+                                {grupos.length === 0 && <option value="">No hay grupos</option>}
+                              </select>
+                            )}
+                            {viewFilterMode === 'docente' && (
+                              <select value={selectedDocenteId} onChange={e => setSelectedDocenteId(e.target.value)}>
+                                {docentes.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                                {docentes.length === 0 && <option value="">No hay docentes</option>}
+                              </select>
+                            )}
+                            {viewFilterMode === 'espacio' && (
+                              <select value={selectedEspacioId} onChange={e => setSelectedEspacioId(e.target.value)}>
+                                {espacios.map(es => <option key={es.id} value={es.id}>{es.nombre} ({es.tipo})</option>)}
+                                {espacios.length === 0 && <option value="">No hay espacios</option>}
+                              </select>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="toolbar-title" style={{ marginRight: '6px' }}>Filas por:</span>
+                          <div className="toolbar-btn-group">
+                            <button 
+                              className={`toolbar-btn-sm ${timelineGlobalResource === 'grupo' ? 'active' : ''}`}
+                              onClick={() => setTimelineGlobalResource('grupo')}
+                            >
+                              Grupos
+                            </button>
+                            <button 
+                              className={`toolbar-btn-sm ${timelineGlobalResource === 'docente' ? 'active' : ''}`}
+                              onClick={() => setTimelineGlobalResource('docente')}
+                            >
+                              Docentes
+                            </button>
+                            <button 
+                              className={`toolbar-btn-sm ${timelineGlobalResource === 'espacio' ? 'active' : ''}`}
+                              onClick={() => setTimelineGlobalResource('espacio')}
+                            >
+                              Espacios
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {conflictWarning && (
+                    <div className="workspace-conflict-alert">
+                      <AlertCircle size={16} />
+                      <span>{conflictWarning}</span>
+                    </div>
+                  )}
+
+                  {/* 3. The Grid Display */}
+                  {generatedSchedule.slots.length > 0 ? (
+                    timelineViewMode === 'individual' ? (
+                      /* Vista Individual (Clásica) */
+                      <div className="timetable-wrapper">
+                        <table className="timetable-grid" id="main-timetable-grid">
+                          <thead>
+                            <tr>
+                              <th className="time-column">Módulo</th>
+                              {config.diasSemana.map(d => <th key={d}>{d}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array(config.numModulos).fill(0).map((_, modIdx) => {
+                              const timeRange = getSlotTimeRange(modIdx);
+                              const isRecessTime = modIdx === 3;
+                              
+                              return (
+                                <React.Fragment key={modIdx}>
+                                  {isRecessTime && (
+                                    <tr className="recess-row">
+                                      <td>RECESO</td>
+                                      <td colSpan={config.diasSemana.length}>
+                                        RECESO ESCOLAR ({config.recesoInicio} - {config.recesoFin})
+                                      </td>
+                                    </tr>
+                                  )}
+                                  <tr>
+                                    <td className="text-center" style={{ background: '#f8fafc' }}>
+                                      <strong>Mód. {modIdx + 1}</strong>
+                                      <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>{timeRange}</div>
+                                    </td>
+                                    {config.diasSemana.map(day => {
+                                      let cellSlots = [];
+                                      let activeIndex = -1;
+                                      
+                                      if (viewFilterMode === 'grupo' && selectedGroupId) {
+                                        activeIndex = generatedSchedule.slots.findIndex(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
+                                        if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
+                                      } else if (viewFilterMode === 'docente' && selectedDocenteId) {
+                                        activeIndex = generatedSchedule.slots.findIndex(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
+                                        if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
+                                      } else if (viewFilterMode === 'espacio' && selectedEspacioId) {
+                                        activeIndex = generatedSchedule.slots.findIndex(s => (s.espacioId === selectedEspacioId || (s.espacioIds && s.espacioIds.includes(selectedEspacioId))) && s.dia === day && s.moduloIndex === modIdx);
+                                        if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
+                                      }
+
+                                      return (
+                                        <td 
+                                          key={day}
+                                          onDragOver={handleDragOver}
+                                          onDrop={(e) => handleDrop(e, day, modIdx)}
+                                          className={draggedSlot ? 'drop-target-active' : ''}
+                                          style={{ height: '95px', padding: '6px' }}
+                                        >
+                                          {cellSlots.map(slot => {
+                                            const matColor = getMateriaColor(slot.materiaId, slot.materiaNombre);
+                                            const isCardHighlighted = hoveredDocenteId === slot.docenteId || hoveredMateriaId === slot.materiaId;
+                                            return (
+                                              <div 
+                                                key={slot.id} 
+                                                className={`timetable-class-card colored ${isCardHighlighted ? 'highlighted' : ''}`}
+                                                style={{ 
+                                                  borderLeftColor: matColor,
+                                                  '--subject-color-light': `${matColor}18`,
+                                                  '--subject-color-solid': matColor
+                                                }}
+                                                draggable
+                                                onDragStart={() => handleDragStart(slot, activeIndex)}
+                                                onMouseEnter={() => {
+                                                  setHoveredDocenteId(slot.docenteId);
+                                                  setHoveredMateriaId(slot.materiaId);
+                                                }}
+                                                onMouseLeave={() => {
+                                                  setHoveredDocenteId(null);
+                                                  setHoveredMateriaId(null);
+                                                }}
+                                                title="Doble clic para quitar y enviar a pendientes"
+                                                onDoubleClick={() => {
+                                                  if (window.confirm('¿Deseas quitar esta hora y mandarla a pendientes?')) {
+                                                    handleRemovePlacedSlot(activeIndex);
+                                                  }
+                                                }}
+                                              >
+                                                <div className="class-card-subject" title={slot.materiaNombre}>{slot.materiaNombre}</div>
+                                                {viewFilterMode !== 'docente' && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
+                                                {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>Grupo: {slot.grupoNombre}</div>}
+                                                
+                                                <div className="class-card-meta">
+                                                  <span className="class-card-space" title={slot.espacioNombre || 'Aula'}>
+                                                    📍 {slot.espacioNombre || 'Aula'}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      /* Vista Global (aSc Style Timeline) */
+                      <div className="global-timeline-wrapper">
+                        <table className="global-timeline-table">
+                          <thead>
+                            {/* Primera fila: Días con colSpan */}
+                            <tr>
+                              <th className="resource-header-col" style={{ zIndex: 4 }}>Recurso</th>
+                              {config.diasSemana.map(day => (
+                                <th key={day} colSpan={config.numModulos} className="day-header-col">
+                                  {day}
+                                </th>
+                              ))}
+                            </tr>
+                            {/* Segunda fila: Módulos individuales */}
+                            <tr>
+                              <th className="resource-header-col" style={{ zIndex: 4 }}>
+                                {timelineGlobalResource === 'grupo' ? 'Grupos' : timelineGlobalResource === 'docente' ? 'Docentes' : 'Espacios'}
+                              </th>
+                              {globalColumns.map((col, idx) => (
+                                <th key={idx} className="mod-header-col">
+                                  M{col.modIdx + 1}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Renderizar filas por recurso */}
+                            {(timelineGlobalResource === 'grupo' ? grupos : timelineGlobalResource === 'docente' ? docentes : espacios).map(resource => (
+                              <tr key={resource.id}>
+                                <td className="resource-cell-sticky">
+                                  <strong>
+                                    {timelineGlobalResource === 'grupo' 
+                                      ? `${resource.grado}°${resource.grupo}` 
+                                      : resource.nombre}
+                                  </strong>
+                                  {timelineGlobalResource === 'grupo' && (
+                                    <div className="res-subtitle">{resource.turno}</div>
+                                  )}
+                                  {timelineGlobalResource === 'docente' && (
+                                    <div className="res-subtitle">{resource.academia || 'Base'}</div>
+                                  )}
                                 </td>
-                                {config.diasSemana.map(day => {
-                                  // Filtrar slots de la celda en base a la vista activa
-                                  let cellSlots = [];
+                                
+                                {globalColumns.map((col, colIdx) => {
+                                  // Buscar si hay un slot agendado para este recurso en esta coordenada
+                                  let slot = null;
                                   let activeIndex = -1;
                                   
-                                  if (viewFilterMode === 'grupo' && selectedGroupId) {
-                                    activeIndex = generatedSchedule.slots.findIndex(s => s.grupoId === selectedGroupId && s.dia === day && s.moduloIndex === modIdx);
-                                    if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
-                                  } else if (viewFilterMode === 'docente' && selectedDocenteId) {
-                                    activeIndex = generatedSchedule.slots.findIndex(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
-                                    if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
-                                  } else if (viewFilterMode === 'espacio' && selectedEspacioId) {
-                                    activeIndex = generatedSchedule.slots.findIndex(s => s.espacioId === selectedEspacioId && s.dia === day && s.moduloIndex === modIdx);
-                                    if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
+                                  if (timelineGlobalResource === 'grupo') {
+                                    activeIndex = generatedSchedule.slots.findIndex(s => 
+                                      (s.grupoId === resource.id || (s.grupoIds && s.grupoIds.includes(resource.id))) && 
+                                      s.dia === col.day && 
+                                      s.moduloIndex === col.modIdx
+                                    );
+                                  } else if (timelineGlobalResource === 'docente') {
+                                    activeIndex = generatedSchedule.slots.findIndex(s => 
+                                      s.docenteId === resource.id && 
+                                      s.dia === col.day && 
+                                      s.moduloIndex === col.modIdx
+                                    );
+                                  } else if (timelineGlobalResource === 'espacio') {
+                                    activeIndex = generatedSchedule.slots.findIndex(s => 
+                                      (s.espacioId === resource.id || (s.espacioIds && s.espacioIds.includes(resource.id))) && 
+                                      s.dia === col.day && 
+                                      s.moduloIndex === col.modIdx
+                                    );
+                                  }
+
+                                  if (activeIndex !== -1) {
+                                    slot = generatedSchedule.slots[activeIndex];
                                   }
 
                                   return (
                                     <td 
-                                      key={day}
+                                      key={colIdx}
                                       onDragOver={handleDragOver}
-                                      onDrop={(e) => handleDrop(e, day, modIdx)}
+                                      onDrop={(e) => handleDropGlobal(e, resource.id, col.day, col.modIdx, timelineGlobalResource)}
                                       className={draggedSlot ? 'drop-target-active' : ''}
-                                      style={{ height: '90px' }}
+                                      style={{ padding: '4px', minWidth: '85px', height: '64px' }}
                                     >
-                                      {cellSlots.map(slot => (
-                                        <div 
-                                          key={slot.id} 
-                                          className="timetable-class-card"
-                                          draggable
-                                          onDragStart={() => handleDragStart(slot, activeIndex)}
-                                          title="Arrastra para cambiar la hora de la clase o haz doble clic para quitar"
-                                          onDoubleClick={() => {
-                                            if (window.confirm('¿Deseas quitar esta hora y mandarla a pendientes?')) {
-                                              handleRemovePlacedSlot(activeIndex);
-                                            }
-                                          }}
-                                        >
-                                          <div className="class-card-subject">{slot.materiaNombre}</div>
-                                          {viewFilterMode !== 'docente' && <div className="class-card-teacher">{slot.docenteNombre}</div>}
-                                          {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: 'bold' }}>Grupo: {slot.grupoNombre}</div>}
-                                          
-                                          <div className="class-card-meta">
-                                            <span className="class-card-space">
-                                              📍 {slot.espacioNombre || 'Aula'}
-                                            </span>
+                                      {slot && (() => {
+                                        const matColor = getMateriaColor(slot.materiaId, slot.materiaNombre);
+                                        const isCardHighlighted = hoveredDocenteId === slot.docenteId || hoveredMateriaId === slot.materiaId;
+                                        
+                                        return (
+                                          <div 
+                                            className={`global-timeline-card ${isCardHighlighted ? 'highlighted' : ''}`}
+                                            style={{ 
+                                              background: matColor,
+                                              borderLeft: `4px solid ${matColor}`
+                                            }}
+                                            draggable
+                                            onDragStart={() => handleDragStart(slot, activeIndex)}
+                                            onMouseEnter={() => {
+                                              setHoveredDocenteId(slot.docenteId);
+                                              setHoveredMateriaId(slot.materiaId);
+                                            }}
+                                            onMouseLeave={() => {
+                                              setHoveredDocenteId(null);
+                                              setHoveredMateriaId(null);
+                                            }}
+                                            onDoubleClick={() => {
+                                              if (window.confirm('¿Quitar del horario?')) {
+                                                handleRemovePlacedSlot(activeIndex);
+                                              }
+                                            }}
+                                            title={`${slot.materiaNombre}\nDocente: ${slot.docenteNombre}\nGrupo: ${slot.grupoNombre}\nEspacio: ${slot.espacioNombre || 'Aula'}`}
+                                          >
+                                            <div className="gt-subject">{slot.materiaNombre}</div>
+                                            {timelineGlobalResource !== 'docente' && <div className="gt-docent">{slot.docenteNombre}</div>}
+                                            {timelineGlobalResource !== 'grupo' && <div className="gt-docent" style={{ fontWeight: 'bold' }}>{slot.grupoNombre}</div>}
                                           </div>
-                                        </div>
-                                      ))}
+                                        );
+                                      })()}
                                     </td>
                                   );
                                 })}
                               </tr>
-                            </React.Fragment>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  ) : (
+                    <div className="empty-state" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', border: '1.5px dashed var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '2rem', background: '#f8fafc' }}>
+                      <Sparkles size={48} className="text-muted" style={{ marginBottom: '1rem', color: '#94a3b8' }} />
+                      <h3>No hay horarios generados</h3>
+                      <p className="text-muted">Utiliza el generador automático en la barra lateral o arrastra materias para iniciar la planificación.</p>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {generatedSchedule.slots.length === 0 && (
-                <div className="empty-state">
-                  <Sparkles size={48} className="text-muted" />
-                  <h3>No hay horarios generados</h3>
-                  <p>Haz clic en el botón de arriba para calcular automáticamente el horario de la escuela.</p>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {/* ======================================= */}
           {/* TAB 8: FORMATOS DE IMPRESIÓN Y EXCEL     */}
@@ -2005,13 +2779,13 @@ const Horarios = () => {
                                           cellText = occupied.map(s => `${s.grupoNombre}: ${s.materiaNombre}`).join(' | ');
                                         }
                                       } else if (printOption === 'grupo' && selectedGroupId) {
-                                        const s = generatedSchedule.slots.find(s => s.grupoId === selectedGroupId && s.dia === day && s.moduloIndex === modIdx);
+                                        const s = generatedSchedule.slots.find(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
                                         if (s) cellText = `${s.materiaNombre}\n(${s.docenteNombre})\n📍 ${s.espacioNombre || 'Aula'}`;
                                       } else if (printOption === 'docente' && selectedDocenteId) {
                                         const s = generatedSchedule.slots.find(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
                                         if (s) cellText = `${s.materiaNombre}\nGrupo: ${s.grupoNombre}\n📍 ${s.espacioNombre || 'Aula'}`;
                                       } else if (printOption === 'espacio' && selectedEspacioId) {
-                                        const s = generatedSchedule.slots.find(s => s.espacioId === selectedEspacioId && s.dia === day && s.moduloIndex === modIdx);
+                                        const s = generatedSchedule.slots.find(s => (s.espacioId === selectedEspacioId || (s.espacioIds && s.espacioIds.includes(selectedEspacioId))) && s.dia === day && s.moduloIndex === modIdx);
                                         if (s) cellText = `Grupo: ${s.grupoNombre}\nMateria: ${s.materiaNombre}\nDocente: ${s.docenteNombre}`;
                                       }
 
@@ -2073,13 +2847,13 @@ const Horarios = () => {
                                         cellText = occupied.map(s => `${s.grupoNombre}: ${s.materiaNombre}`).join(' | ');
                                       }
                                     } else if (printOption === 'grupo' && selectedGroupId) {
-                                      const s = generatedSchedule.slots.find(s => s.grupoId === selectedGroupId && s.dia === day && s.moduloIndex === modIdx);
+                                      const s = generatedSchedule.slots.find(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
                                       if (s) cellText = `${s.materiaNombre}\n(${s.docenteNombre})\n📍 ${s.espacioNombre || 'Aula'}`;
                                     } else if (printOption === 'docente' && selectedDocenteId) {
                                       const s = generatedSchedule.slots.find(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
                                       if (s) cellText = `${s.materiaNombre}\nGrupo: ${s.grupoNombre}\n📍 ${s.espacioNombre || 'Aula'}`;
                                     } else if (printOption === 'espacio' && selectedEspacioId) {
-                                      const s = generatedSchedule.slots.find(s => s.espacioId === selectedEspacioId && s.dia === day && s.moduloIndex === modIdx);
+                                      const s = generatedSchedule.slots.find(s => (s.espacioId === selectedEspacioId || (s.espacioIds && s.espacioIds.includes(selectedEspacioId))) && s.dia === day && s.moduloIndex === modIdx);
                                       if (s) cellText = `Grupo: ${s.grupoNombre}\nMateria: ${s.materiaNombre}\nDocente: ${s.docenteNombre}`;
                                     }
 

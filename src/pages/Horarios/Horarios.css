@@ -603,3 +603,785 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Custom scrollable checkbox lists for multiple selection */
+.checkbox-scroll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: white;
+  margin-top: 6px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.checkbox-item:hover {
+  background: #f1f5f9;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+/* ==========================================================================
+   aSc TimeTables Redesign - Schedule Generator Workspace
+   ========================================================================== */
+
+.workspace-container {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+
+.workspace-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.workspace-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* Sidebar Cards */
+.workspace-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.workspace-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-card .card-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* AI Generator Card Button */
+.generator-action-card {
+  background: linear-gradient(180deg, var(--color-surface) 0%, rgba(243, 244, 246, 0.4) 100%);
+}
+
+.ai-generate-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  color: white;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-generate-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+  filter: brightness(1.05);
+}
+
+.ai-generate-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ai-generate-btn:disabled {
+  background: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ai-generate-btn .sparkle-icon {
+  animation: float-sparkle 2s ease-in-out infinite;
+}
+
+@keyframes float-sparkle {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.15); }
+}
+
+.ai-generate-btn.loading {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  animation: pulse-loading 1.5s linear infinite;
+}
+
+@keyframes pulse-loading {
+  0% { opacity: 0.95; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.95; }
+}
+
+.last-generated-time {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Quality KPI Card */
+.quality-kpi-card {
+  border-left: 4px solid var(--q-color, var(--color-primary));
+}
+
+.kpi-score-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.kpi-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: conic-gradient(var(--q-color) calc(var(--q-val) * 1%), #e2e8f0 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+.kpi-circle::before {
+  content: '';
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  z-index: 1;
+}
+
+.kpi-value {
+  position: relative;
+  z-index: 2;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+  letter-spacing: -0.5px;
+}
+
+.kpi-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-status {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-top: 2px;
+}
+
+.kpi-details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.kpi-detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.kpi-detail-item strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Dock de Fichas Pendientes */
+.pending-dock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.pending-count-badge {
+  background: #f1f5f9;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.pending-cards-scroll-area {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.pending-cards-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+
+.pending-cards-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pending-cards-scroll-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.pending-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  gap: 8px;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px dashed #a7f3d0;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Pending Card Styling (draggable) */
+.pending-card {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-left: 5px solid var(--subject-color-solid, var(--color-primary));
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  cursor: grab;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background-color: var(--subject-color-light, rgba(0, 0, 0, 0.02));
+}
+
+.pending-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  background-color: var(--subject-color-light);
+}
+
+.pending-card:active {
+  cursor: grabbing;
+}
+
+.pending-card .p-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.pending-card .p-card-subject {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-card .p-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.pending-card .p-card-meta {
+  font-weight: 700;
+  background: rgba(0,0,0,0.04);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--color-text-primary);
+}
+
+.pending-card .p-card-teacher {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 65%;
+  font-weight: 500;
+}
+
+/* Trash drop zone to discard slots */
+.trash-drop-zone {
+  border: 2px dashed #ef4444;
+  background: #fef2f2;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.trash-drop-zone:hover {
+  background: #fee2e2;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.trash-drop-zone svg {
+  animation: pulse-trash 2s infinite;
+}
+
+@keyframes pulse-trash {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Workspace Toolbar & Controls */
+.workspace-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  gap: 1rem;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.workspace-toolbar .toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-toolbar .toolbar-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.workspace-toolbar .toolbar-btn-group {
+  display: flex;
+  background: #e2e8f0;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+}
+
+.workspace-toolbar button.toolbar-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.workspace-toolbar button.toolbar-btn.active {
+  background: white;
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.workspace-toolbar button.toolbar-btn-sm {
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.workspace-toolbar button.toolbar-btn-sm.active {
+  background: white;
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.workspace-toolbar .toolbar-filter-select select {
+  padding: 5px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  background: white;
+  color: var(--color-text-primary);
+  outline: none;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.workspace-toolbar .toolbar-filter-select select:focus {
+  border-color: var(--color-primary);
+}
+
+/* Conflict Alerts */
+.workspace-conflict-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  animation: slide-in-top 0.2s ease-out;
+}
+
+@keyframes slide-in-top {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Individual Class Card in Grid (Glassmorphism & colored highlights) */
+.timetable-class-card.colored {
+  background: var(--subject-color-light, #eff6ff);
+  border: 1px solid var(--color-border);
+  border-left: 5px solid var(--subject-color-solid, var(--color-primary));
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+  justify-content: space-between;
+}
+
+.timetable-class-card.colored:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.timetable-class-card.colored.highlighted {
+  transform: scale(1.04) translateY(-2px);
+  box-shadow: 0 0 14px var(--subject-color-solid), 0 4px 15px rgba(0, 0, 0, 0.12);
+  filter: brightness(1.05);
+  z-index: 10;
+}
+
+.timetable-class-card.colored .class-card-subject {
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.timetable-class-card.colored .class-card-teacher {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.timetable-class-card.colored .class-card-meta {
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.timetable-class-card.colored .class-card-space {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* Timeline/Grid Drag and Drop Targets */
+.timetable-grid td.drop-target-active,
+.global-timeline-table td.drop-target-active {
+  background-color: #f0fdf4 !important;
+  border: 1.5px dashed #10b981 !important;
+}
+
+/* ==========================================================================
+   Vista Global aSc Style Timeline (Multi-Fila)
+   ========================================================================== */
+
+.global-timeline-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  background: white;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.global-timeline-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.global-timeline-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.global-timeline-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.global-timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+}
+
+.global-timeline-table th,
+.global-timeline-table td {
+  border: 1px solid var(--color-border);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.global-timeline-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  padding: 6px 4px;
+  font-size: 0.75rem;
+}
+
+.global-timeline-table th.day-header-col {
+  border-bottom: 2px solid var(--color-border);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  background: #f1f5f9;
+  font-weight: 800;
+}
+
+.global-timeline-table th.mod-header-col {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: #f8fafc;
+  border-bottom: 1.5px solid var(--color-border);
+}
+
+/* Sticky Resource Header Column */
+.global-timeline-table th.resource-header-col {
+  position: sticky;
+  left: 0;
+  background: #f1f5f9;
+  font-weight: 800;
+  border-right: 2.5px solid var(--color-border);
+  width: 140px;
+  min-width: 140px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.04);
+  z-index: 5;
+}
+
+.global-timeline-table td.resource-cell-sticky {
+  position: sticky;
+  left: 0;
+  background: #f8fafc;
+  z-index: 4;
+  border-right: 2.5px solid var(--color-border);
+  text-align: left;
+  padding: 8px 12px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.04);
+}
+
+.global-timeline-table td.resource-cell-sticky strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+}
+
+.global-timeline-table td.resource-cell-sticky .res-subtitle {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  margin-top: 1px;
+  font-weight: 500;
+}
+
+.global-timeline-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.global-timeline-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.global-timeline-table tbody tr:hover td.resource-cell-sticky {
+  background-color: #f1f5f9;
+}
+
+.global-timeline-table td {
+  position: relative;
+  background: white;
+  transition: background-color 0.15s ease;
+}
+
+/* Global Timeline Card styling */
+.global-timeline-card {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #1e293b;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.global-timeline-card:hover {
+  transform: scale(1.02);
+  filter: brightness(1.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+.global-timeline-card:active {
+  cursor: grabbing;
+}
+
+.global-timeline-card.highlighted {
+  transform: scale(1.06);
+  filter: brightness(1.1);
+  box-shadow: 0 0 8px var(--subject-color-solid, rgba(0, 0, 0, 0.3)), 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+.global-timeline-card .gt-subject {
+  font-weight: 800;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.global-timeline-card .gt-docent {
+  font-size: 0.62rem;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  color: #334155;
+}
+
+/* Responsive Overrides for Workspace */
+@media (max-width: 1024px) {
+  .workspace-container {
+    flex-direction: column;
+  }
+  
+  .workspace-sidebar {
+    width: 100%;
+  }
+  
+  .pending-cards-scroll-area {
+    max-height: 180px;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    gap: 0.75rem;
+  }
+  
+  .pending-card {
+    min-width: 180px;
+    max-width: 200px;
+  }
+}
+
