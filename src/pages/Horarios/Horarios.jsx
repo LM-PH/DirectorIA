@@ -660,6 +660,15 @@ const Horarios = () => {
     return g1.some(id => id && g2.includes(id));
   };
 
+  const getRealHoursForAsig = (asig) => {
+    const hours = Number(asig.horasSemanales || 1);
+    const isTaller = asig.materiaNombre?.toLowerCase().includes('taller') || false;
+    if (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) {
+      return hours * asig.grupoIds.length;
+    }
+    return hours;
+  };
+
   const shareSpace = (s1, s2, nonAulas = null) => {
     const sp1 = s1.espacioIds || (s1.espacioId ? [s1.espacioId] : []);
     const sp2 = s2.espacioIds || (s2.espacioId ? [s2.espacioId] : []);
@@ -1209,7 +1218,7 @@ const Horarios = () => {
     });
 
     const totalPlaced = updatedSlots.length;
-    const totalRequested = asignaciones.reduce((acc, curr) => acc + Number(curr.horasSemanales || 1), 0);
+    const totalRequested = asignaciones.reduce((acc, curr) => acc + getRealHoursForAsig(curr), 0);
     const qualityScore = Math.max(0, Math.min(100, Math.round(((totalPlaced / totalRequested) * 100) - (gapCount * 2))));
 
     const updatedSchedule = {
@@ -1399,7 +1408,7 @@ const Horarios = () => {
     });
 
     const totalPlaced = newSlots.length;
-    const totalRequested = asignaciones.reduce((acc, curr) => acc + Number(curr.horasSemanales || 1), 0);
+    const totalRequested = asignaciones.reduce((acc, curr) => acc + getRealHoursForAsig(curr), 0);
     const qualityScore = Math.max(0, Math.min(100, Math.round(((totalPlaced / totalRequested) * 100) - (gapCount * 2))));
 
     const updatedSchedule = {
@@ -2177,19 +2186,31 @@ const Horarios = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {asignaciones.map(a => (
-                    <tr key={a.id}>
-                      <td><strong>{a.docenteNombre}</strong></td>
-                      <td>{a.materiaNombre}</td>
-                      <td><span className="badge badge-info">{a.grupoNombre}</span></td>
-                      <td>{a.horasSemanales} hrs/sem</td>
-                      <td>{a.espacioNombre || <span className="text-muted">No requerido (Aula)</span>}</td>
-                      <td className="actions-cell">
-                        <button className="btn-icon-small" onClick={() => openEditAsignacion(a)}><Edit2 size={15} /></button>
-                        <button className="btn-icon-small text-error" onClick={() => handleDeleteAsignacion(a.id)}><Trash2 size={15} /></button>
-                      </td>
-                    </tr>
-                  ))}
+                  {asignaciones.map(a => {
+                    const getRealHoursForAsig = (asig) => (asig.horasSemanales || 0) * (asig.grupoIds?.length || 1);
+                    return (
+                      <tr key={a.id}>
+                        <td><strong>{a.docenteNombre}</strong></td>
+                        <td>{a.materiaNombre}</td>
+                        <td><span className="badge badge-info">{a.grupoNombre}</span></td>
+                        <td className="text-center">
+                          {a.grupoIds && a.grupoIds.length > 1 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <span>{a.horasSemanales} hrs/sem <small className="text-muted">(x{a.grupoIds.length})</small></span>
+                              <span style={{ fontWeight: '600', color: '#0f172a', fontSize: '0.85rem' }}>Total: {getRealHoursForAsig(a)} hrs</span>
+                            </div>
+                          ) : (
+                            <span>{a.horasSemanales} hrs/sem</span>
+                          )}
+                        </td>
+                        <td>{a.espacioNombre || <span className="text-muted">No requerido (Aula)</span>}</td>
+                        <td className="actions-cell">
+                          <button className="btn-icon-small" onClick={() => openEditAsignacion(a)}><Edit2 size={15} /></button>
+                          <button className="btn-icon-small text-error" onClick={() => handleDeleteAsignacion(a.id)}><Trash2 size={15} /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {asignaciones.length === 0 && (
                     <tr>
                       <td colSpan="6" className="text-center text-muted">
@@ -2202,12 +2223,14 @@ const Horarios = () => {
 
               {/* MODAL REGISTRO ASIGNACIÓN */}
               {modalOpen.asignacion && (() => {
+                const getRealHoursForAsig = (asig) => (asig.horasSemanales || 0) * (asig.grupoIds?.length || 1);
                 const selectedDocenteObj = docentes.find(d => d.id === formAsignacion.docenteId);
                 const totalDocenteHours = selectedDocenteObj ? Number(selectedDocenteObj.horasAsignadas || 0) : 0;
                 const assignedHours = asignaciones
                   .filter(a => a.docenteId === formAsignacion.docenteId && (!editItem.asignacion || a.id !== editItem.asignacion.id))
-                  .reduce((sum, a) => sum + Number(a.horasSemanales || 0), 0);
-                const newTotalHours = assignedHours + Number(formAsignacion.horasSemanales || 0);
+                  .reduce((sum, a) => sum + getRealHoursForAsig(a), 0);
+                const currentAsigHours = getRealHoursForAsig(formAsignacion);
+                const newTotalHours = assignedHours + currentAsigHours;
                 const isOverHours = selectedDocenteObj && totalDocenteHours > 0 && newTotalHours > totalDocenteHours;
                 const docenteMateriasIds = selectedDocenteObj?.materiasIds || [];
                 const filteredMateriasForDocente = showAllMateriasInAssignment 
@@ -2241,8 +2264,8 @@ const Horarios = () => {
                             </div>
                             {isOverHours && (
                               <div style={{ color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', marginTop: '6px', fontWeight: '500' }}>
-                                <AlertCircle size={14} />
-                                <span>Con esta asignación ({formAsignacion.horasSemanales} hrs) sumará {newTotalHours} hrs, superando su plaza ({totalDocenteHours} hrs).</span>
+                                <AlertTriangle size={14} />
+                                <span>Con esta asignación ({currentAsigHours} hrs reales) sumará {newTotalHours} hrs, superando su plaza ({totalDocenteHours} hrs).</span>
                               </div>
                             )}
                           </div>
