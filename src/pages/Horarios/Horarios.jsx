@@ -891,6 +891,23 @@ const Horarios = () => {
               const spcBusy = slotsState.some(s => s.dia === day && s.moduloIndex === m && shareSpace(s, slot, nonAulaSpaceIds));
               if (spcBusy) { score += 10000; isHardConflict = true; }
 
+              // Choque Global de Talleres: Si ambos son talleres pero para grados diferentes (tKey distinto), no pueden empalmarse
+              let tallerGlobalBusy = false;
+              if (isTaller) {
+                tallerGlobalBusy = slotsState.some(s => {
+                  if (s.dia === day && s.moduloIndex === m) {
+                    const sNameLower = s.materiaNombre.toLowerCase();
+                    const sIsTaller = sNameLower.includes('taller') || sNameLower.includes('tecnolog');
+                    if (sIsTaller) {
+                      const sTKey = (s.grupoIds || []).slice().sort().join(',');
+                      if (sTKey !== tKey) return true; // Diferente grado = Choque!
+                    }
+                  }
+                  return false;
+                });
+              }
+              if (tallerGlobalBusy) { score += 10000; isHardConflict = true; }
+
               const docDisp = docenteDisponibilidadMap.get(slot.docenteId);
               if (docDisp?.[day]?.[m] === false) {
                 score += 10000; isHardConflict = true;
@@ -980,6 +997,11 @@ const Horarios = () => {
                 if (s.dia !== day || s.moduloIndex !== m) {
                   softConf += 50000; // Penalización insuperable para evitar que se desalineen
                 }
+              }
+            } else {
+              // Choque Global de Talleres: Diferente grado (tKey distinto) -> ¡Choque duro!
+              if (s.dia === day && s.moduloIndex === m) {
+                groupClashCount++; // Tratado como choque de grupo para que el optimizador lo repela
               }
             }
           }
