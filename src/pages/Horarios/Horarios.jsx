@@ -626,18 +626,30 @@ const Horarios = () => {
   };
 
   // Helpers para comparar entidades de forma robusta
+  const normalizeText = (text) => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remueve acentos
+      .trim()
+      .replace(/\s+/g, ' '); // Remueve múltiples espacios
+  };
+
   const isGenericTeacher = (name) => {
     if (!name) return true;
-    const n = name.toLowerCase().trim();
+    const n = normalizeText(name);
     return n === '' || n === 'sin docente' || n === 'pendiente' || n === 'taller' || n === 'sin asignar' || n === 'por asignar' || n === 'a designar';
   };
 
   const isSameTeacher = (s1, s2) => {
-    if (s1.docenteId && s2.docenteId) {
-      return s1.docenteId === s2.docenteId;
+    if (s1.docenteId && s2.docenteId && s1.docenteId === s2.docenteId) {
+      return true;
     }
-    if (!isGenericTeacher(s1.docenteNombre) && !isGenericTeacher(s2.docenteNombre)) {
-      return s1.docenteNombre.toLowerCase().trim() === s2.docenteNombre.toLowerCase().trim();
+    const name1 = normalizeText(s1.docenteNombre);
+    const name2 = normalizeText(s2.docenteNombre);
+    if (!isGenericTeacher(name1) && !isGenericTeacher(name2)) {
+      return name1 === name2;
     }
     return false;
   };
