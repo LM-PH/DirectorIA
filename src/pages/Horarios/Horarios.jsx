@@ -83,6 +83,7 @@ const Horarios = () => {
   // Loading States
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, conflicts: 0, stage: '' });
 
   // Search Filters for Catalogs
   const [searchDocente, setSearchDocente] = useState('');
@@ -624,6 +625,36 @@ const Horarios = () => {
     }
   };
 
+  // Helpers para comparar entidades de forma robusta
+  const isGenericTeacher = (name) => {
+    if (!name) return true;
+    const n = name.toLowerCase().trim();
+    return n === '' || n === 'sin docente' || n === 'pendiente' || n === 'taller' || n === 'sin asignar' || n === 'por asignar' || n === 'a designar';
+  };
+
+  const isSameTeacher = (s1, s2) => {
+    if (s1.docenteId && s2.docenteId) {
+      return s1.docenteId === s2.docenteId;
+    }
+    if (!isGenericTeacher(s1.docenteNombre) && !isGenericTeacher(s2.docenteNombre)) {
+      return s1.docenteNombre.toLowerCase().trim() === s2.docenteNombre.toLowerCase().trim();
+    }
+    return false;
+  };
+
+  const shareGroup = (s1, s2) => {
+    const g1 = s1.grupoIds || (s1.grupoId ? [s1.grupoId] : []);
+    const g2 = s2.grupoIds || (s2.grupoId ? [s2.grupoId] : []);
+    return g1.some(id => id && g2.includes(id));
+  };
+
+  const shareSpace = (s1, s2, nonAulas = null) => {
+    const sp1 = s1.espacioIds || (s1.espacioId ? [s1.espacioId] : []);
+    const sp2 = s2.espacioIds || (s2.espacioId ? [s2.espacioId] : []);
+    const nonAulasSet = nonAulas || new Set(espacios.filter(e => e.tipo !== 'Aula').map(e => e.id));
+    return sp1.some(id => id && nonAulasSet.has(id) && sp2.includes(id));
+  };
+
   // ==========================================
   // SECCIÓN 7: ALGORITMO GENERADOR AUTOMÁTICO
   // ==========================================
@@ -634,10 +665,36 @@ const Horarios = () => {
     }
 
     setSaving(true);
+    setGenerationProgress({ current: 0, total: 100, conflicts: 0, stage: 'Preparando datos...' });
+
+    // Helper para pausas de renderizado
+    const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
 
     try {
       const numModulos = Number(config.numModulos) || 6;
       const dias = config.diasSemana || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+      // Estructuras auxiliares para velocidad O(1)
+      const nonAulaSpaceIds = new Set(espacios.filter(e => e.tipo !== 'Aula').map(e => e.id));
+      const docenteDisponibilidadMap = new Map();
+      docentes.forEach(d => {
+        docenteDisponibilidadMap.set(d.id, d.disponibilidad || {});
+      });
+
+      // Helper para determinar si una materia requiere un bloque doble
+      const checkNeedsDoubleModule = (materiaNombre, horasSemanales, espacioRequerido) => {
+        if (!materiaNombre) return false;
+        const nameLower = materiaNombre.toLowerCase();
+        const isScience = nameLower.includes('fisica') || 
+                          nameLower.includes('física') || 
+                          nameLower.includes('quimica') || 
+                          nameLower.includes('química') || 
+                          nameLower.includes('biologia') || 
+                          nameLower.includes('biología') || 
+                          nameLower.includes('ciencias') || 
+                          espacioRequerido === 'Laboratorio';
+        return isScience && horasSemanales >= 4;
+      };
 
       // 1. Descomponer asignaciones en slots individuales de 1 hora
       let slotsToPlace = [];
@@ -645,6 +702,7 @@ const Horarios = () => {
         const hours = Number(asig.horasSemanales || 1);
         const mat = materias.find(m => m.id === asig.materiaId);
         const espacioReq = mat?.espacioRequerido || 'Aula';
+        const needsDouble = checkNeedsDoubleModule(asig.materiaNombre, hours, espacioReq);
         
         for (let h = 0; h < hours; h++) {
           slotsToPlace.push({
@@ -661,19 +719,20 @@ const Horarios = () => {
             espacioIds: asig.espacioIds || (asig.espacioId ? [asig.espacioId] : []),
             espacioNombre: asig.espacioNombre || '',
             horasSemanales: hours,
-            espacioRequerido: espacioReq
+            espacioRequerido: espacioReq,
+            needsDouble
           });
         }
       });
 
-      // Heurística de ordenación MRV (Minimum Remaining Values / Más restrictivos primero)
+      // Heurística de ordenación MRV (Minimum Remaining Values)
       const teacherPriorityVal = (docId) => {
         const t = docentes.find(d => d.id === docId);
-        if (!t) return 2; // Media
+        if (!t) return 2;
         if (t.prioridad === 'Muy alta') return 4;
         if (t.prioridad === 'Alta') return 3;
         if (t.prioridad === 'Baja') return 1;
-        return 2; // Media
+        return 2;
       };
 
       const teacherAvailabilityCount = (docId) => {
@@ -689,242 +748,267 @@ const Horarios = () => {
       };
 
       slotsToPlace.sort((a, b) => {
-        // Ordenar por prioridad docente (Muy alta > Alta > Media > Baja)
         const prioA = teacherPriorityVal(a.docenteId);
         const prioB = teacherPriorityVal(b.docenteId);
         if (prioA !== prioB) return prioB - prioA;
 
-        // Ordenar por menor disponibilidad docente (más restrictivos primero)
         const availA = teacherAvailabilityCount(a.docenteId);
         const availB = teacherAvailabilityCount(b.docenteId);
         if (availA !== availB) return availA - availB;
 
-        // Aulas especiales primero
-        const spaceA = a.espacioIds && a.espacioIds.some(spId => espacios.find(e => e.id === spId)?.tipo !== 'Aula') ? 1 : 0;
-        const spaceB = b.espacioIds && b.espacioIds.some(spId => espacios.find(e => e.id === spId)?.tipo !== 'Aula') ? 1 : 0;
+        const spaceA = a.espacioIds && a.espacioIds.some(spId => nonAulaSpaceIds.has(spId)) ? 1 : 0;
+        const spaceB = b.espacioIds && b.espacioIds.some(spId => nonAulaSpaceIds.has(spId)) ? 1 : 0;
         if (spaceA !== spaceB) return spaceB - spaceA;
 
         return 0;
       });
 
-      // Helper para determinar si una materia requiere un bloque doble
-      const needsDoubleModule = (materiaNombre, horasSemanales, espacioRequerido) => {
-        if (!materiaNombre) return false;
-        const nameLower = materiaNombre.toLowerCase();
-        const isScience = nameLower.includes('fisica') || 
-                          nameLower.includes('física') || 
-                          nameLower.includes('quimica') || 
-                          nameLower.includes('química') || 
-                          nameLower.includes('biologia') || 
-                          nameLower.includes('biología') || 
-                          nameLower.includes('ciencias') || 
-                          espacioRequerido === 'Laboratorio';
-        return isScience && horasSemanales >= 4;
-      };
-
-      // 2. Resolver con algoritmo Min-Conflicts (Iterative Repair CSP)
-      let slotsState = [];
-
-      const getSlotConflicts = (sIdx, day, m, currentState) => {
+      // Evaluador detallado de colisiones
+      const getSlotConflictsDetailed = (sIdx, day, m, currentState) => {
         const slot = currentState[sIdx];
-        let conf = 0;
+        let hardConf = 0;
+        let softConf = 0;
 
-        // 1. Cruce de docente (un docente no puede estar en dos grupos a la vez)
-        const docBusy = currentState.some((s, idx) => idx !== sIdx && s.docenteId === slot.docenteId && s.dia === day && s.moduloIndex === m);
-        if (docBusy) conf += 1000;
+        let teacherClash = false;
+        let groupClash = false;
+        let spaceClash = false;
+        let sameDayMatCount = 0;
+        let isConsecutiveSameDay = false;
+        
+        const materiaModsByDay = {
+          'Lunes': [], 'Martes': [], 'Miércoles': [], 'Jueves': [], 'Viernes': [],
+          'Sábado': [], 'Sábado ': [], 'Sábado': [], 'Sabado': [], 'Domingo': []
+        };
 
-        // 2. Disponibilidad de docente (no programar si el docente tiene bloqueada la hora)
-        const docObj = docentes.find(d => d.id === slot.docenteId);
-        if (docObj?.disponibilidad?.[day]?.[m] === false) {
-          conf += 1000;
-        }
+        for (let i = 0; i < currentState.length; i++) {
+          if (i === sIdx) continue;
+          const s = currentState[i];
 
-        // 3. Cruce de grupo (un grupo no puede tener más de una clase en el mismo módulo)
-        const slotGIds = slot.grupoIds || [];
-        const grpBusy = currentState.some((s, idx) => {
-          if (idx === sIdx) return false;
-          if (s.dia !== day || s.moduloIndex !== m) return false;
-          const otherGIds = s.grupoIds || [];
-          return slotGIds.some(gId => gId && otherGIds.includes(gId));
-        });
-        if (grpBusy) conf += 1000;
-
-        // 4. Cruce de espacio (los espacios tipo laboratorios/talleres no pueden duplicar uso)
-        const slotSpcIds = slot.espacioIds || [];
-        const spcBusy = currentState.some((s, idx) => {
-          if (idx === sIdx) return false;
-          if (s.dia !== day || s.moduloIndex === m) return false;
-          const otherSpcIds = s.espacioIds || [];
-          return slotSpcIds.some(spId => {
-            if (!spId) return false;
-            const spcObj = espacios.find(sp => sp.id === spId);
-            if (!spcObj || spcObj.tipo === 'Aula') return false;
-            return otherSpcIds.includes(spId);
-          });
-        });
-        if (spcBusy) conf += 1000;
-
-        // 5. Restricción pedagógica: máximo 2 horas de la misma materia por día para cada grupo
-        let maxSubjectDailyClash = false;
-        if (slotGIds.length > 0) {
-          for (const gId of slotGIds) {
-            const dayMatCount = currentState.filter((s, idx) => 
-              idx !== sIdx && 
-              s.materiaId === slot.materiaId && 
-              s.dia === day && 
-              (s.grupoIds || []).includes(gId)
-            ).length;
-            if (dayMatCount >= 2) {
-              maxSubjectDailyClash = true;
-              break;
-            }
+          // 1. Cruce Docente
+          if (s.dia === day && s.moduloIndex === m && isSameTeacher(s, slot)) {
+            teacherClash = true;
           }
-        }
-        if (maxSubjectDailyClash) conf += 200; // Penalización fuerte para distribuir la materia
 
-        // 5.1 Consecutividad obligatoria: si hay más de 1 hora de una materia el mismo día, deben ser consecutivas
-        if (slotGIds.length > 0) {
-          for (const gId of slotGIds) {
-            const sameDaySlots = currentState.filter((s, idx) => 
-              idx !== sIdx && 
-              s.materiaId === slot.materiaId && 
-              s.dia === day && 
-              (s.grupoIds || []).includes(gId)
-            );
-            if (sameDaySlots.length > 0) {
-              const isConsecutive = sameDaySlots.some(s => s.moduloIndex === m - 1 || s.moduloIndex === m + 1);
-              if (!isConsecutive) {
-                conf += 400; // Penalización alta si están separadas en el mismo día (ej: M1 y M5)
-              }
-            }
+          // 2. Cruce Grupo
+          if (s.dia === day && s.moduloIndex === m && shareGroup(s, slot)) {
+            groupClash = true;
           }
-        }
 
-        // 5.2 Incentivo de sesión doble para materias de Ciencias / Laboratorio
-        if (needsDoubleModule(slot.materiaNombre, slot.horasSemanales, slot.espacioRequerido)) {
-          let doubleModuleCount = 0;
-          if (slotGIds.length > 0) {
-            for (const gId of slotGIds) {
-              const dayMap = {};
-              currentState.forEach(s => {
-                if (s.materiaId === slot.materiaId && (s.grupoIds || []).includes(gId)) {
-                  if (!dayMap[s.dia]) dayMap[s.dia] = [];
-                  dayMap[s.dia].push(s.moduloIndex);
-                }
-              });
-              
-              Object.keys(dayMap).forEach(dayKey => {
-                const mods = dayMap[dayKey].sort((a, b) => a - b);
-                for (let idx = 0; idx < mods.length - 1; idx++) {
-                  if (mods[idx+1] - mods[idx] === 1) {
-                    doubleModuleCount++;
-                  }
-                }
-              });
+          // 3. Cruce Espacio
+          if (s.dia === day && s.moduloIndex === m && shareSpace(s, slot, nonAulaSpaceIds)) {
+            spaceClash = true;
+          }
+
+          // 4. Materia del mismo grupo en el mismo día
+          if (s.materiaId === slot.materiaId && s.dia === day && shareGroup(s, slot)) {
+            sameDayMatCount++;
+            if (s.moduloIndex === m - 1 || s.moduloIndex === m + 1) {
+              isConsecutiveSameDay = true;
             }
           }
           
-          if (doubleModuleCount === 0) {
-            conf += 150; // Penalización si la materia científica no tiene ningún bloque doble (2 horas continuas)
+          // 5. Agrupar módulos semanales de esta materia para el conteo de bloques dobles
+          if (s.materiaId === slot.materiaId && shareGroup(s, slot)) {
+            if (materiaModsByDay[s.dia]) {
+              materiaModsByDay[s.dia].push(s.moduloIndex);
+            }
           }
         }
 
-        // 6. Evitar horas consecutivas excesivas para el docente
-        const adjacentTeach = currentState.filter((s, idx) => 
-          idx !== sIdx && s.docenteId === slot.docenteId && s.dia === day &&
-          (s.moduloIndex === m - 1 || s.moduloIndex === m + 1)
-        ).length;
-        if (adjacentTeach >= 2) conf += 5; // Penalización leve por pegarle más de 2 horas consecutivas al maestro
+        // Agregar el módulo evaluado actualmente
+        if (materiaModsByDay[day]) {
+          materiaModsByDay[day].push(m);
+        }
 
-        return conf;
+        if (teacherClash) hardConf += 1;
+        if (groupClash) hardConf += 1;
+        if (spaceClash) hardConf += 1;
+
+        // Disponibilidad de docente
+        const docDisp = docenteDisponibilidadMap.get(slot.docenteId);
+        if (docDisp?.[day]?.[m] === false) {
+          hardConf += 1;
+        }
+
+        // Límite de materia por día (> 2 horas es penalización)
+        if (sameDayMatCount >= 2) softConf += 200;
+
+        // Consecutividad: si hay más de 1 hora del mismo grupo/materia el mismo día, deben ser consecutivas
+        if (sameDayMatCount > 0 && !isConsecutiveSameDay) {
+          softConf += 400;
+        }
+
+        // Conteo de parejas de horas consecutivas semanales (bloques dobles)
+        if (slot.needsDouble) {
+          let doublePairs = 0;
+          Object.keys(materiaModsByDay).forEach(dKey => {
+            const mods = materiaModsByDay[dKey].sort((a, b) => a - b);
+            for (let idx = 0; idx < mods.length - 1; idx++) {
+              if (mods[idx+1] - mods[idx] === 1) {
+                doublePairs++;
+              }
+            }
+          });
+          if (doublePairs === 0) {
+            softConf += 150;
+          }
+        }
+
+        // Evitar horas consecutivas excesivas para el docente (leves)
+        let teacherAdjacentCount = 0;
+        for (let i = 0; i < currentState.length; i++) {
+          if (i === sIdx) continue;
+          const s = currentState[i];
+          if (s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1) && isSameTeacher(s, slot)) {
+            teacherAdjacentCount++;
+          }
+        }
+        if (teacherAdjacentCount >= 2) softConf += 5;
+
+        return { hard: hardConf, soft: softConf, total: hardConf * 10000 + softConf };
       };
 
-      // Inicialización codiciosa de estados
-      slotsToPlace.forEach(slot => {
-        let bestDay = dias[0];
-        let bestM = 0;
-        let minConf = 999999;
+      // 2. Inicialización codiciosa de estados
+      let slotsState = [];
+      for (let i = 0; i < slotsToPlace.length; i++) {
+        const slot = slotsToPlace[i];
+        let bestCells = [];
+        let minScore = 99999999;
 
         dias.forEach(day => {
           for (let m = 0; m < numModulos; m++) {
             const tempState = [...slotsState, { ...slot, dia: day, moduloIndex: m }];
-            const conf = getSlotConflicts(slotsState.length, day, m, tempState);
+            const scoreObj = getSlotConflictsDetailed(slotsState.length, day, m, tempState);
 
-            if (conf < minConf) {
-              minConf = conf;
-              bestDay = day;
-              bestM = m;
+            if (scoreObj.total < minScore) {
+              minScore = scoreObj.total;
+              bestCells = [{ day, m }];
+            } else if (scoreObj.total === minScore) {
+              bestCells.push({ day, m });
             }
           }
         });
 
+        const chosenCell = bestCells[Math.floor(Math.random() * bestCells.length)];
         slotsState.push({
           ...slot,
-          dia: bestDay,
-          moduloIndex: bestM
+          dia: chosenCell.day,
+          moduloIndex: chosenCell.m
         });
-      });
 
-      // Bucle de reparación iterativa (Min-Conflicts)
-      let maxIterations = 1000;
+        // Yield cada 20 slots para mantener responsivo el navegador
+        if (i % 20 === 0) {
+          setGenerationProgress({
+            current: i + 1,
+            total: slotsToPlace.length,
+            conflicts: 0,
+            stage: 'Inicializando horario...'
+          });
+          await yieldToMain();
+        }
+      }
+
+      // 3. Bucle de reparación iterativa (Min-Conflicts)
+      let maxIterations = 3000;
       let iteration = 0;
 
       while (iteration < maxIterations) {
-        let conflictingIndices = [];
+        // Encontrar slots con conflictos
+        let hardConflictingIndices = [];
+        let softConflictingIndices = [];
+
         for (let i = 0; i < slotsState.length; i++) {
-          const c = getSlotConflicts(i, slotsState[i].dia, slotsState[i].moduloIndex, slotsState);
-          if (c > 0) {
-            conflictingIndices.push(i);
+          const res = getSlotConflictsDetailed(i, slotsState[i].dia, slotsState[i].moduloIndex, slotsState);
+          if (res.hard > 0) {
+            hardConflictingIndices.push(i);
+          } else if (res.soft > 0) {
+            softConflictingIndices.push(i);
           }
         }
 
-        if (conflictingIndices.length === 0) {
-          break; // Solución perfecta sin conflictos
+        const totalHard = hardConflictingIndices.length;
+        const totalSoft = softConflictingIndices.length;
+
+        if (totalHard === 0 && totalSoft === 0) {
+          break; // Posicionamiento óptimo sin conflictos
         }
 
-        const randIdx = conflictingIndices[Math.floor(Math.random() * conflictingIndices.length)];
-        const slotToRepair = slotsState[randIdx];
+        // Seleccionar un slot para reparar (priorizar los que tienen conflictos duros)
+        let randIdx;
+        let repairingHard = false;
+        if (totalHard > 0) {
+          randIdx = hardConflictingIndices[Math.floor(Math.random() * totalHard)];
+          repairingHard = true;
+        } else {
+          randIdx = softConflictingIndices[Math.floor(Math.random() * totalSoft)];
+        }
 
-        let bestDay = slotToRepair.dia;
-        let bestM = slotToRepair.moduloIndex;
-        let minConf = getSlotConflicts(randIdx, bestDay, bestM, slotsState);
+        const slotToRepair = slotsState[randIdx];
+        let currentScoreObj = getSlotConflictsDetailed(randIdx, slotToRepair.dia, slotToRepair.moduloIndex, slotsState);
+        let minScore = currentScoreObj.total;
+        let bestCells = [{ day: slotToRepair.dia, m: slotToRepair.moduloIndex }];
 
         dias.forEach(day => {
           for (let m = 0; m < numModulos; m++) {
             if (day === slotToRepair.dia && m === slotToRepair.moduloIndex) continue;
 
-            const conf = getSlotConflicts(randIdx, day, m, slotsState);
-            if (conf < minConf) {
-              minConf = conf;
-              bestDay = day;
-              bestM = m;
-            } else if (conf === minConf && Math.random() < 0.2) {
-              bestDay = day;
-              bestM = m;
+            const scoreObj = getSlotConflictsDetailed(randIdx, day, m, slotsState);
+
+            // Regla crítica: si estamos optimizando un conflicto blando,
+            // NUNCA debemos permitir moverlo a una celda que cree un conflicto duro.
+            if (!repairingHard && scoreObj.hard > 0) {
+              continue;
+            }
+
+            if (scoreObj.total < minScore) {
+              minScore = scoreObj.total;
+              bestCells = [{ day, m }];
+            } else if (scoreObj.total === minScore) {
+              bestCells.push({ day, m });
             }
           }
         });
 
-        slotsState[randIdx].dia = bestDay;
-        slotsState[randIdx].moduloIndex = bestM;
+        // Escoger una de las mejores celdas al azar
+        const chosenCell = bestCells[Math.floor(Math.random() * bestCells.length)];
+        slotsState[randIdx].dia = chosenCell.day;
+        slotsState[randIdx].moduloIndex = chosenCell.m;
+
         iteration++;
-      }
 
-      // 3. Separar los slots válidos (sin conflictos duros) y pendientes
-      let placedSlots = [];
-      let unplacedSlots = [];
-
-      for (let i = 0; i < slotsState.length; i++) {
-        const conf = getSlotConflicts(i, slotsState[i].dia, slotsState[i].moduloIndex, slotsState);
-        // Filtramos para permitir solo slots sin conflictos duros (peso >= 1000 representa choques)
-        if (conf < 500) {
-          placedSlots.push(slotsState[i]);
-        } else {
-          unplacedSlots.push(slotsState[i]);
+        // Yield e informe cada 100 iteraciones
+        if (iteration % 100 === 0) {
+          setGenerationProgress({
+            current: iteration,
+            total: maxIterations,
+            conflicts: totalHard + totalSoft,
+            stage: `Optimizando (Paso ${iteration} / ${maxIterations})...`
+          });
+          await yieldToMain();
         }
       }
 
-      // Calcular calidad y huecos (gaps) para grupos
+      // 4. Barrido Final Seguro (Sweep)
+      let placedSlots = [];
+      let unplacedSlots = [];
+
+      slotsState.forEach(slot => {
+        // Validar cruces duros reales contra lo ya colocado de forma segura
+        const docBusy = placedSlots.some(s => s.dia === slot.dia && s.moduloIndex === slot.moduloIndex && isSameTeacher(s, slot));
+        const grpBusy = placedSlots.some(s => s.dia === slot.dia && s.moduloIndex === slot.moduloIndex && shareGroup(s, slot));
+        const spcBusy = placedSlots.some(s => s.dia === slot.dia && s.moduloIndex === slot.moduloIndex && shareSpace(s, slot, nonAulaSpaceIds));
+        
+        const docDisp = docenteDisponibilidadMap.get(slot.docenteId);
+        const docUnavailable = docDisp?.[slot.dia]?.[slot.moduloIndex] === false;
+
+        if (docBusy || grpBusy || spcBusy || docUnavailable) {
+          unplacedSlots.push(slot);
+        } else {
+          placedSlots.push(slot);
+        }
+      });
+
+      // Calcular calidad y huecos
       let gapCount = 0;
       grupos.forEach(g => {
         dias.forEach(day => {
@@ -959,9 +1043,10 @@ const Horarios = () => {
     } catch (e) {
       console.error(e);
       alert('Error en el motor de generación horaria.');
+    } finally {
+      setSaving(false);
+      setGenerationProgress({ current: 0, total: 0, conflicts: 0, stage: '' });
     }
-
-    setSaving(false);
   };
 
   // ==========================================
@@ -999,37 +1084,24 @@ const Horarios = () => {
     
     // Comprobar cruce de docente
     const docClash = generatedSchedule.slots.some((s, idx) => 
-      idx !== index && s.docenteId === slot.docenteId && s.dia === targetDay && s.moduloIndex === targetModIdx
+      idx !== index && s.dia === targetDay && s.moduloIndex === targetModIdx && isSameTeacher(s, slot)
     );
     if (docClash) {
       errors.push(`El docente ${slot.docenteNombre} ya está ocupado en este módulo.`);
     }
 
     // Comprobar cruce de grupo
-    const slotGIds = slot.grupoIds || (slot.grupoId ? [slot.grupoId] : []);
-    const grpClash = generatedSchedule.slots.some((s, idx) => {
-      if (idx === index) return false;
-      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
-      const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
-      return slotGIds.some(gId => gId && otherGIds.includes(gId));
-    });
+    const grpClash = generatedSchedule.slots.some((s, idx) => 
+      idx !== index && s.dia === targetDay && s.moduloIndex === targetModIdx && shareGroup(s, slot)
+    );
     if (grpClash) {
       errors.push(`El grupo (o uno de los grupos asociados) ya tiene clase asignada en este módulo.`);
     }
 
     // Comprobar cruce de espacio
-    const slotSpcIds = slot.espacioIds || (slot.espacioId ? [slot.espacioId] : []);
-    const spcClash = generatedSchedule.slots.some((s, idx) => {
-      if (idx === index) return false;
-      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
-      const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
-      return slotSpcIds.some(spId => {
-        if (!spId) return false;
-        const spcObj = espacios.find(sp => sp.id === spId);
-        if (!spcObj || spcObj.tipo === 'Aula') return false;
-        return otherSpcIds.includes(spId);
-      });
-    });
+    const spcClash = generatedSchedule.slots.some((s, idx) => 
+      idx !== index && s.dia === targetDay && s.moduloIndex === targetModIdx && shareSpace(s, slot)
+    );
     if (spcClash) {
       errors.push(`El espacio (o uno de los espacios reservados) ya está ocupado en este módulo.`);
     }
@@ -1100,28 +1172,13 @@ const Horarios = () => {
   const handlePlacePendingSlot = async (slot, targetDay, targetModIdx) => {
     // 1. Validar conflictos
     const errors = [];
-    const docClash = generatedSchedule.slots.some(s => s.docenteId === slot.docenteId && s.dia === targetDay && s.moduloIndex === targetModIdx);
+    const docClash = generatedSchedule.slots.some(s => s.dia === targetDay && s.moduloIndex === targetModIdx && isSameTeacher(s, slot));
     if (docClash) errors.push(`El docente ${slot.docenteNombre} ya está ocupado.`);
     
-    const slotGIds = slot.grupoIds || (slot.grupoId ? [slot.grupoId] : []);
-    const grpClash = generatedSchedule.slots.some(s => {
-      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
-      const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
-      return slotGIds.some(gId => gId && otherGIds.includes(gId));
-    });
+    const grpClash = generatedSchedule.slots.some(s => s.dia === targetDay && s.moduloIndex === targetModIdx && shareGroup(s, slot));
     if (grpClash) errors.push(`El grupo (o uno de los grupos asociados) ya tiene clase.`);
     
-    const slotSpcIds = slot.espacioIds || (slot.espacioId ? [slot.espacioId] : []);
-    const spcClash = generatedSchedule.slots.some(s => {
-      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
-      const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
-      return slotSpcIds.some(spId => {
-        if (!spId) return false;
-        const spcObj = espacios.find(sp => sp.id === spId);
-        if (!spcObj || spcObj.tipo === 'Aula') return false;
-        return otherSpcIds.includes(spId);
-      });
-    });
+    const spcClash = generatedSchedule.slots.some(s => s.dia === targetDay && s.moduloIndex === targetModIdx && shareSpace(s, slot));
     if (spcClash) errors.push(`El espacio ya está ocupado.`);
 
     const docObj = docentes.find(d => d.id === slot.docenteId);
@@ -1207,37 +1264,24 @@ const Horarios = () => {
     
     // Comprobar cruce de docente
     const docClash = generatedSchedule.slots.some((s, idx) => 
-      idx !== index && s.docenteId === updatedSlot.docenteId && s.dia === targetDay && s.moduloIndex === targetModIdx
+      idx !== index && s.dia === targetDay && s.moduloIndex === targetModIdx && isSameTeacher(s, updatedSlot)
     );
     if (docClash) {
       errors.push(`El docente ${updatedSlot.docenteNombre} ya está ocupado en este módulo.`);
     }
 
     // Comprobar cruce de grupo
-    const slotGIds = updatedSlot.grupoIds || (updatedSlot.grupoId ? [updatedSlot.grupoId] : []);
-    const grpClash = generatedSchedule.slots.some((s, idx) => {
-      if (idx === index) return false;
-      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
-      const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
-      return slotGIds.some(gId => gId && otherGIds.includes(gId));
-    });
+    const grpClash = generatedSchedule.slots.some((s, idx) => 
+      idx !== index && s.dia === targetDay && s.moduloIndex === targetModIdx && shareGroup(s, updatedSlot)
+    );
     if (grpClash) {
       errors.push(`El grupo ya tiene clase asignada en este módulo.`);
     }
 
     // Comprobar cruce de espacio
-    const slotSpcIds = updatedSlot.espacioIds || (updatedSlot.espacioId ? [updatedSlot.espacioId] : []);
-    const spcClash = generatedSchedule.slots.some((s, idx) => {
-      if (idx === index) return false;
-      if (s.dia !== targetDay || s.moduloIndex !== targetModIdx) return false;
-      const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
-      return slotSpcIds.some(spId => {
-        if (!spId) return false;
-        const spcObj = espacios.find(sp => sp.id === spId);
-        if (!spcObj || spcObj.tipo === 'Aula') return false;
-        return otherSpcIds.includes(spId);
-      });
-    });
+    const spcClash = generatedSchedule.slots.some((s, idx) => 
+      idx !== index && s.dia === targetDay && s.moduloIndex === targetModIdx && shareSpace(s, updatedSlot)
+    );
     if (spcClash) {
       errors.push(`El espacio ya está ocupado en este módulo.`);
     }
@@ -2315,9 +2359,18 @@ const Horarios = () => {
                       onClick={handleAutoGenerateSchedule} 
                       className={`btn-primary ai-generate-btn ${saving ? 'loading' : ''}`}
                       disabled={saving || asignaciones.length === 0}
+                      style={{ display: 'flex', flexDirection: 'column', gap: '4px', height: 'auto', padding: '12px 16px' }}
                     >
-                      <Sparkles size={18} className="sparkle-icon" />
-                      {saving ? 'Generando Horarios...' : 'GENERAR CON INTELIGENCIA ARTIFICIAL'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', width: '100%' }}>
+                        <Sparkles size={18} className="sparkle-icon" />
+                        <span>{saving ? 'Generando...' : 'GENERAR CON INTELIGENCIA ARTIFICIAL'}</span>
+                      </div>
+                      {saving && generationProgress.stage && (
+                        <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: 'normal', width: '100%', textAlign: 'center', marginTop: '2px' }}>
+                          {generationProgress.stage} ({generationProgress.current}/{generationProgress.total})
+                          {generationProgress.conflicts > 0 && ` | Colisiones: ${generationProgress.conflicts}`}
+                        </div>
+                      )}
                     </button>
                     
                     {generatedSchedule.updatedAt && (
