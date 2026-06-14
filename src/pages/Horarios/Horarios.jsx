@@ -2338,60 +2338,72 @@ const Horarios = () => {
 
                           {/* Selección de Grupos */}
                           <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                               <label style={{ margin: 0 }}>Grupo(s) de Destino *</label>
-                              <label style={{ margin: 0, fontWeight: 'normal', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <input 
-                                  type="checkbox"
-                                  checked={!formAsignacion.grupoIds || formAsignacion.grupoIds.length === 0}
-                                  onChange={(e) => {
-                                    const isTaller = e.target.checked;
-                                    setFormAsignacion(prev => ({
-                                      ...prev,
-                                      grupoIds: isTaller ? [] : (grupos[0] ? [grupos[0].id] : []),
-                                      grupoId: isTaller ? '' : (grupos[0]?.id || '')
-                                    }));
-                                  }}
-                                />
-                                Es un Taller (Sin grupo específico)
-                              </label>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                {[1, 2, 3].map(grado => (
+                                  <button 
+                                    key={grado}
+                                    type="button"
+                                    style={{ padding: '3px 10px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--color-border)', background: '#f8fafc', cursor: 'pointer', fontWeight: '500', color: 'var(--color-text)' }}
+                                    onClick={() => {
+                                      const gradoGrupos = grupos.filter(g => Number(g.grado) === grado).map(g => g.id);
+                                      if (gradoGrupos.length === 0) return;
+                                      setFormAsignacion(prev => {
+                                        const current = prev.grupoIds || [];
+                                        const allSelected = gradoGrupos.every(id => current.includes(id));
+                                        let list = [...current];
+                                        if (allSelected) {
+                                          list = list.filter(id => !gradoGrupos.includes(id));
+                                        } else {
+                                          gradoGrupos.forEach(id => {
+                                            if (!list.includes(id)) list.push(id);
+                                          });
+                                        }
+                                        return { ...prev, grupoIds: list, grupoId: list[0] || '' };
+                                      });
+                                    }}
+                                  >
+                                    Seleccionar {grado}°
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                             
-                            {formAsignacion.grupoIds && formAsignacion.grupoIds.length > 0 ? (
-                              <div className="checkbox-scroll-list">
-                                {grupos.map(g => {
-                                  const isChecked = formAsignacion.grupoIds?.includes(g.id);
-                                  return (
-                                    <label key={g.id} className="checkbox-item">
-                                      <input 
-                                        type="checkbox"
-                                        checked={isChecked}
-                                        onChange={(e) => {
-                                          const checked = e.target.checked;
-                                          setFormAsignacion(prev => {
-                                            const list = prev.grupoIds ? [...prev.grupoIds] : [];
-                                            if (checked) {
-                                              if (!list.includes(g.id)) list.push(g.id);
-                                            } else {
-                                              const idx = list.indexOf(g.id);
-                                              if (idx !== -1) list.splice(idx, 1);
-                                            }
-                                            return {
-                                              ...prev,
-                                              grupoIds: list,
-                                              grupoId: list[0] || ''
-                                            };
-                                          });
-                                        }}
-                                      />
-                                      <span>{g.grado}°{g.grupo} - {g.turno}</span>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <div style={{ padding: '16px', background: '#f8fafc', border: '1.5px dashed var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
-                                Configurado como Taller (Sin grupo específico). No ocupará el horario de ningún grupo en particular.
+                            <div className="checkbox-scroll-list">
+                              {grupos.map(g => {
+                                const isChecked = formAsignacion.grupoIds?.includes(g.id);
+                                return (
+                                  <label key={g.id} className="checkbox-item">
+                                    <input 
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setFormAsignacion(prev => {
+                                          const list = prev.grupoIds ? [...prev.grupoIds] : [];
+                                          if (checked) {
+                                            if (!list.includes(g.id)) list.push(g.id);
+                                          } else {
+                                            const idx = list.indexOf(g.id);
+                                            if (idx !== -1) list.splice(idx, 1);
+                                          }
+                                          return {
+                                            ...prev,
+                                            grupoIds: list,
+                                            grupoId: list[0] || ''
+                                          };
+                                        });
+                                      }}
+                                    />
+                                    <span>{g.grado}°{g.grupo} - {g.turno}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            {(!formAsignacion.grupoIds || formAsignacion.grupoIds.length === 0) && (
+                              <div style={{ fontSize: '0.8rem', color: '#b45309', marginTop: '4px' }}>
+                                Selecciona al menos un grupo. Los talleres compartidos deben tener seleccionados todos los grupos de su grado.
                               </div>
                             )}
                           </div>
