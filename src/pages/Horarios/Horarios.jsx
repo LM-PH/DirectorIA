@@ -1086,11 +1086,17 @@ const Horarios = () => {
     // Create updated copy
     const updatedSlot = { ...slot };
     if (resourceType === 'grupo') {
-      const gObj = grupos.find(g => g.id === targetRowId);
-      if (gObj) {
-        updatedSlot.grupoId = targetRowId;
-        updatedSlot.grupoIds = [targetRowId];
-        updatedSlot.grupoNombre = `${gObj.grado}°${gObj.grupo}`;
+      if (targetRowId === 'taller-sin-grupo') {
+        updatedSlot.grupoId = '';
+        updatedSlot.grupoIds = [];
+        updatedSlot.grupoNombre = 'Taller (Sin grupo)';
+      } else {
+        const gObj = grupos.find(g => g.id === targetRowId);
+        if (gObj) {
+          updatedSlot.grupoId = targetRowId;
+          updatedSlot.grupoIds = [targetRowId];
+          updatedSlot.grupoNombre = `${gObj.grado}°${gObj.grupo}`;
+        }
       }
     } else if (resourceType === 'docente') {
       const dObj = docentes.find(d => d.id === targetRowId);
@@ -2375,6 +2381,7 @@ const Horarios = () => {
                             {viewFilterMode === 'grupo' && (
                               <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)}>
                                 {grupos.map(g => <option key={g.id} value={g.id}>{g.grado}°{g.grupo} - {g.turno}</option>)}
+                                <option value="taller-sin-grupo">Taller (Sin grupo)</option>
                                 {grupos.length === 0 && <option value="">No hay grupos</option>}
                               </select>
                             )}
@@ -2464,8 +2471,17 @@ const Horarios = () => {
                                       let activeIndex = -1;
                                       
                                       if (viewFilterMode === 'grupo' && selectedGroupId) {
-                                        activeIndex = generatedSchedule.slots.findIndex(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
-                                        if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
+                                        if (selectedGroupId === 'taller-sin-grupo') {
+                                          generatedSchedule.slots.forEach(s => {
+                                            const noGroup = (!s.grupoId || s.grupoId === '') && (!s.grupoIds || s.grupoIds.length === 0);
+                                            if (noGroup && s.dia === day && s.moduloIndex === modIdx) {
+                                              cellSlots.push(s);
+                                            }
+                                          });
+                                        } else {
+                                          activeIndex = generatedSchedule.slots.findIndex(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
+                                          if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
+                                        }
                                       } else if (viewFilterMode === 'docente' && selectedDocenteId) {
                                         activeIndex = generatedSchedule.slots.findIndex(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
                                         if (activeIndex !== -1) cellSlots = [generatedSchedule.slots[activeIndex]];
@@ -2485,6 +2501,8 @@ const Horarios = () => {
                                           {cellSlots.map(slot => {
                                             const matColor = getMateriaColor(slot.materiaId, slot.materiaNombre);
                                             const isCardHighlighted = hoveredDocenteId === slot.docenteId || hoveredMateriaId === slot.materiaId;
+                                            const originalIndex = generatedSchedule.slots.findIndex(s => s.id === slot.id);
+                                            
                                             return (
                                               <div 
                                                 key={slot.id} 
@@ -2495,7 +2513,7 @@ const Horarios = () => {
                                                   '--subject-color-solid': matColor
                                                 }}
                                                 draggable
-                                                onDragStart={() => handleDragStart(slot, activeIndex)}
+                                                onDragStart={() => handleDragStart(slot, originalIndex)}
                                                 onMouseEnter={() => {
                                                   setHoveredDocenteId(slot.docenteId);
                                                   setHoveredMateriaId(slot.materiaId);
@@ -2507,7 +2525,7 @@ const Horarios = () => {
                                                 title="Doble clic para quitar y enviar a pendientes"
                                                 onDoubleClick={() => {
                                                   if (window.confirm('¿Deseas quitar esta hora y mandarla a pendientes?')) {
-                                                    handleRemovePlacedSlot(activeIndex);
+                                                    handleRemovePlacedSlot(originalIndex);
                                                   }
                                                 }}
                                               >
@@ -2560,99 +2578,126 @@ const Horarios = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {/* Renderizar filas por recurso */}
-                            {(timelineGlobalResource === 'grupo' ? grupos : timelineGlobalResource === 'docente' ? docentes : espacios).map(resource => (
-                              <tr key={resource.id}>
-                                <td className="resource-cell-sticky">
-                                  <strong>
-                                    {timelineGlobalResource === 'grupo' 
-                                      ? `${resource.grado}°${resource.grupo}` 
-                                      : resource.nombre}
-                                  </strong>
-                                  {timelineGlobalResource === 'grupo' && (
-                                    <div className="res-subtitle">{resource.turno}</div>
-                                  )}
-                                  {timelineGlobalResource === 'docente' && (
-                                    <div className="res-subtitle">{resource.academia || 'Base'}</div>
-                                  )}
-                                </td>
-                                
-                                {globalColumns.map((col, colIdx) => {
-                                  // Buscar si hay un slot agendado para este recurso en esta coordenada
-                                  let slot = null;
-                                  let activeIndex = -1;
+                            {(() => {
+                              let resources = [];
+                              if (timelineGlobalResource === 'grupo') {
+                                resources = [...grupos, { id: 'taller-sin-grupo', grado: 'Talleres', grupo: '(Sin grupo)', turno: 'Varios' }];
+                              } else if (timelineGlobalResource === 'docente') {
+                                resources = docentes;
+                              } else {
+                                resources = espacios;
+                              }
+                              
+                              return resources.map(resource => (
+                                <tr key={resource.id}>
+                                  <td className="resource-cell-sticky">
+                                    <strong>
+                                      {timelineGlobalResource === 'grupo' 
+                                        ? (resource.id === 'taller-sin-grupo' ? 'Talleres' : `${resource.grado}°${resource.grupo}`)
+                                        : resource.nombre}
+                                    </strong>
+                                    {timelineGlobalResource === 'grupo' && (
+                                      <div className="res-subtitle">
+                                        {resource.id === 'taller-sin-grupo' ? 'Sin grupo' : resource.turno}
+                                      </div>
+                                    )}
+                                    {timelineGlobalResource === 'docente' && (
+                                      <div className="res-subtitle">{resource.academia || 'Base'}</div>
+                                    )}
+                                  </td>
                                   
-                                  if (timelineGlobalResource === 'grupo') {
-                                    activeIndex = generatedSchedule.slots.findIndex(s => 
-                                      (s.grupoId === resource.id || (s.grupoIds && s.grupoIds.includes(resource.id))) && 
-                                      s.dia === col.day && 
-                                      s.moduloIndex === col.modIdx
-                                    );
-                                  } else if (timelineGlobalResource === 'docente') {
-                                    activeIndex = generatedSchedule.slots.findIndex(s => 
-                                      s.docenteId === resource.id && 
-                                      s.dia === col.day && 
-                                      s.moduloIndex === col.modIdx
-                                    );
-                                  } else if (timelineGlobalResource === 'espacio') {
-                                    activeIndex = generatedSchedule.slots.findIndex(s => 
-                                      (s.espacioId === resource.id || (s.espacioIds && s.espacioIds.includes(resource.id))) && 
-                                      s.dia === col.day && 
-                                      s.moduloIndex === col.modIdx
-                                    );
-                                  }
-
-                                  if (activeIndex !== -1) {
-                                    slot = generatedSchedule.slots[activeIndex];
-                                  }
-
-                                  return (
-                                    <td 
-                                      key={colIdx}
-                                      onDragOver={handleDragOver}
-                                      onDrop={(e) => handleDropGlobal(e, resource.id, col.day, col.modIdx, timelineGlobalResource)}
-                                      className={draggedSlot ? 'drop-target-active' : ''}
-                                      style={{ padding: '4px', minWidth: '85px', height: '64px' }}
-                                    >
-                                      {slot && (() => {
-                                        const matColor = getMateriaColor(slot.materiaId, slot.materiaNombre);
-                                        const isCardHighlighted = hoveredDocenteId === slot.docenteId || hoveredMateriaId === slot.materiaId;
-                                        
-                                        return (
-                                          <div 
-                                            className={`global-timeline-card ${isCardHighlighted ? 'highlighted' : ''}`}
-                                            style={{ 
-                                              background: matColor,
-                                              borderLeft: `4px solid ${matColor}`
-                                            }}
-                                            draggable
-                                            onDragStart={() => handleDragStart(slot, activeIndex)}
-                                            onMouseEnter={() => {
-                                              setHoveredDocenteId(slot.docenteId);
-                                              setHoveredMateriaId(slot.materiaId);
-                                            }}
-                                            onMouseLeave={() => {
-                                              setHoveredDocenteId(null);
-                                              setHoveredMateriaId(null);
-                                            }}
-                                            onDoubleClick={() => {
-                                              if (window.confirm('¿Quitar del horario?')) {
-                                                handleRemovePlacedSlot(activeIndex);
-                                              }
-                                            }}
-                                            title={`${slot.materiaNombre}\nDocente: ${slot.docenteNombre}\nGrupo: ${slot.grupoNombre}\nEspacio: ${slot.espacioNombre || 'Aula'}`}
-                                          >
-                                            <div className="gt-subject">{slot.materiaNombre}</div>
-                                            {timelineGlobalResource !== 'docente' && <div className="gt-docent">{slot.docenteNombre}</div>}
-                                            {timelineGlobalResource !== 'grupo' && <div className="gt-docent" style={{ fontWeight: 'bold' }}>{slot.grupoNombre}</div>}
-                                          </div>
+                                  {globalColumns.map((col, colIdx) => {
+                                    // Buscar si hay slots agendados para este recurso en esta coordenada
+                                    let cellSlots = [];
+                                    
+                                    if (timelineGlobalResource === 'grupo') {
+                                      if (resource.id === 'taller-sin-grupo') {
+                                        generatedSchedule.slots.forEach((s, idx) => {
+                                          const noGroup = (!s.grupoId || s.grupoId === '') && (!s.grupoIds || s.grupoIds.length === 0);
+                                          if (noGroup && s.dia === col.day && s.moduloIndex === col.modIdx) {
+                                            cellSlots.push({ slot: s, index: idx });
+                                          }
+                                        });
+                                      } else {
+                                        const idx = generatedSchedule.slots.findIndex(s => 
+                                          (s.grupoId === resource.id || (s.grupoIds && s.grupoIds.includes(resource.id))) && 
+                                          s.dia === col.day && 
+                                          s.moduloIndex === col.modIdx
                                         );
-                                      })()}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
+                                        if (idx !== -1) {
+                                          cellSlots.push({ slot: generatedSchedule.slots[idx], index: idx });
+                                        }
+                                      }
+                                    } else if (timelineGlobalResource === 'docente') {
+                                      const idx = generatedSchedule.slots.findIndex(s => 
+                                        s.docenteId === resource.id && 
+                                        s.dia === col.day && 
+                                        s.moduloIndex === col.modIdx
+                                      );
+                                      if (idx !== -1) {
+                                        cellSlots.push({ slot: generatedSchedule.slots[idx], index: idx });
+                                      }
+                                    } else if (timelineGlobalResource === 'espacio') {
+                                      const idx = generatedSchedule.slots.findIndex(s => 
+                                        (s.espacioId === resource.id || (s.espacioIds && s.espacioIds.includes(resource.id))) && 
+                                        s.dia === col.day && 
+                                        s.moduloIndex === col.modIdx
+                                      );
+                                      if (idx !== -1) {
+                                        cellSlots.push({ slot: generatedSchedule.slots[idx], index: idx });
+                                      }
+                                    }
+
+                                    return (
+                                      <td 
+                                        key={colIdx}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDropGlobal(e, resource.id, col.day, col.modIdx, timelineGlobalResource)}
+                                        className={draggedSlot ? 'drop-target-active' : ''}
+                                        style={{ padding: '4px', minWidth: '85px', height: '64px' }}
+                                      >
+                                        {cellSlots.map(({ slot: cellSlot, index: activeIdx }) => {
+                                          const matColor = getMateriaColor(cellSlot.materiaId, cellSlot.materiaNombre);
+                                          const isCardHighlighted = hoveredDocenteId === cellSlot.docenteId || hoveredMateriaId === cellSlot.materiaId;
+                                          
+                                          return (
+                                            <div 
+                                              key={cellSlot.id}
+                                              className={`global-timeline-card ${isCardHighlighted ? 'highlighted' : ''}`}
+                                              style={{ 
+                                                background: matColor,
+                                                borderLeft: `4px solid ${matColor}`,
+                                                marginBottom: cellSlots.length > 1 ? '2px' : '0'
+                                              }}
+                                              draggable
+                                              onDragStart={() => handleDragStart(cellSlot, activeIdx)}
+                                              onMouseEnter={() => {
+                                                setHoveredDocenteId(cellSlot.docenteId);
+                                                setHoveredMateriaId(cellSlot.materiaId);
+                                              }}
+                                              onMouseLeave={() => {
+                                                setHoveredDocenteId(null);
+                                                setHoveredMateriaId(null);
+                                              }}
+                                              onDoubleClick={() => {
+                                                if (window.confirm('¿Quitar del horario?')) {
+                                                  handleRemovePlacedSlot(activeIdx);
+                                                }
+                                              }}
+                                              title={`${cellSlot.materiaNombre}\nDocente: ${cellSlot.docenteNombre}\nGrupo: ${cellSlot.grupoNombre}\nEspacio: ${cellSlot.espacioNombre || 'Aula'}`}
+                                            >
+                                              <div className="gt-subject">{cellSlot.materiaNombre}</div>
+                                              {timelineGlobalResource !== 'docente' && <div className="gt-docent">{cellSlot.docenteNombre}</div>}
+                                              {timelineGlobalResource !== 'grupo' && <div className="gt-docent" style={{ fontWeight: 'bold' }}>{cellSlot.grupoNombre}</div>}
+                                            </div>
+                                          );
+                                        })}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ));
+                            })()}
                           </tbody>
                         </table>
                       </div>
