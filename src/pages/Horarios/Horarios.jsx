@@ -701,15 +701,16 @@ const Horarios = () => {
       const checkNeedsDoubleModule = (materiaNombre, horasSemanales, espacioRequerido) => {
         if (!materiaNombre) return false;
         const nameLower = materiaNombre.toLowerCase();
-        const isScience = nameLower.includes('fisica') || 
-                          nameLower.includes('física') || 
-                          nameLower.includes('quimica') || 
-                          nameLower.includes('química') || 
-                          nameLower.includes('biologia') || 
-                          nameLower.includes('biología') || 
-                          nameLower.includes('ciencias') || 
-                          espacioRequerido === 'Laboratorio';
-        return isScience && horasSemanales >= 4;
+        const isDoubleSubject = nameLower.includes('fisica') || 
+                                nameLower.includes('física') || 
+                                nameLower.includes('quimica') || 
+                                nameLower.includes('química') || 
+                                nameLower.includes('taller') || 
+                                nameLower.includes('tecnologia') || 
+                                nameLower.includes('tecnología');
+        
+        // Requieren estar en bloques de 2 horas
+        return isDoubleSubject && horasSemanales >= 2;
       };
 
       // 1. Descomponer asignaciones en slots individuales de 1 hora
