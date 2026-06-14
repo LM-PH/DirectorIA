@@ -702,144 +702,162 @@ const Horarios = () => {
         return 0;
       });
 
-      let placedSlots = [];
-      let unplacedSlots = [];
+      // 2. Resolver con algoritmo Min-Conflicts (Iterative Repair CSP)
+      let slotsState = [];
 
-      // Validadores de restricciones duras
-      const isTeacherBusy = (docId, day, modIdx) => {
-        return placedSlots.some(s => s.docenteId === docId && s.dia === day && s.moduloIndex === modIdx);
-      };
+      const getSlotConflicts = (sIdx, day, m, currentState) => {
+        const slot = currentState[sIdx];
+        let conf = 0;
 
-      const isGroupBusy = (grpId, day, modIdx) => {
-        if (!grpId) return false;
-        return placedSlots.some(s => {
-          if (s.dia !== day || s.moduloIndex !== modIdx) return false;
-          const otherGIds = s.grupoIds || (s.grupoId ? [s.grupoId] : []);
-          return otherGIds.includes(grpId);
+        // 1. Cruce de docente (un docente no puede estar en dos grupos a la vez)
+        const docBusy = currentState.some((s, idx) => idx !== sIdx && s.docenteId === slot.docenteId && s.dia === day && s.moduloIndex === m);
+        if (docBusy) conf += 1000;
+
+        // 2. Disponibilidad de docente (no programar si el docente tiene bloqueada la hora)
+        const docObj = docentes.find(d => d.id === slot.docenteId);
+        if (docObj?.disponibilidad?.[day]?.[m] === false) {
+          conf += 1000;
+        }
+
+        // 3. Cruce de grupo (un grupo no puede tener más de una clase en el mismo módulo)
+        const slotGIds = slot.grupoIds || [];
+        const grpBusy = currentState.some((s, idx) => {
+          if (idx === sIdx) return false;
+          if (s.dia !== day || s.moduloIndex !== m) return false;
+          const otherGIds = s.grupoIds || [];
+          return slotGIds.some(gId => gId && otherGIds.includes(gId));
         });
-      };
+        if (grpBusy) conf += 1000;
 
-      const isSpaceBusy = (spcId, day, modIdx) => {
-        if (!spcId) return false;
-        const spcObj = espacios.find(e => e.id === spcId);
-        if (!spcObj || spcObj.tipo === 'Aula') return false; // El aula común depende del grupo, no choca con otros grupos
-        return placedSlots.some(s => {
-          if (s.dia !== day || s.moduloIndex !== modIdx) return false;
-          const otherSpcIds = s.espacioIds || (s.espacioId ? [s.espacioId] : []);
-          return otherSpcIds.includes(spcId);
+        // 4. Cruce de espacio (los espacios tipo laboratorios/talleres no pueden duplicar uso)
+        const slotSpcIds = slot.espacioIds || [];
+        const spcBusy = currentState.some((s, idx) => {
+          if (idx === sIdx) return false;
+          if (s.dia !== day || s.moduloIndex === m) return false;
+          const otherSpcIds = s.espacioIds || [];
+          return slotSpcIds.some(spId => {
+            if (!spId) return false;
+            const spcObj = espacios.find(sp => sp.id === spId);
+            if (!spcObj || spcObj.tipo === 'Aula') return false;
+            return otherSpcIds.includes(spId);
+          });
         });
+        if (spcBusy) conf += 1000;
+
+        // 5. Restricción pedagógica: máximo 2 horas de la misma materia por día para cada grupo
+        let maxSubjectDailyClash = false;
+        if (slotGIds.length > 0) {
+          for (const gId of slotGIds) {
+            const dayMatCount = currentState.filter((s, idx) => 
+              idx !== sIdx && 
+              s.materiaId === slot.materiaId && 
+              s.dia === day && 
+              (s.grupoIds || []).includes(gId)
+            ).length;
+            if (dayMatCount >= 2) {
+              maxSubjectDailyClash = true;
+              break;
+            }
+          }
+        }
+        if (maxSubjectDailyClash) conf += 200; // Penalización fuerte para distribuir la materia
+
+        // 6. Evitar horas consecutivas excesivas para el docente
+        const adjacentTeach = currentState.filter((s, idx) => 
+          idx !== sIdx && s.docenteId === slot.docenteId && s.dia === day &&
+          (s.moduloIndex === m - 1 || s.moduloIndex === m + 1)
+        ).length;
+        if (adjacentTeach >= 2) conf += 5; // Penalización leve por pegarle más de 2 horas consecutivas al maestro
+
+        return conf;
       };
 
-      const isTeacherAvailable = (docId, day, modIdx) => {
-        const t = docentes.find(d => d.id === docId);
-        if (!t) return true;
-        if (!t.disponibilidad || !t.disponibilidad[day]) return true;
-        return t.disponibilidad[day][modIdx] === true;
-      };
-
-      // Proceso Greedy de colocación
+      // Inicialización codiciosa de estados
       slotsToPlace.forEach(slot => {
-        let bestDay = null;
-        let bestMod = null;
-        let bestScore = -999999;
+        let bestDay = dias[0];
+        let bestM = 0;
+        let minConf = 999999;
 
         dias.forEach(day => {
           for (let m = 0; m < numModulos; m++) {
-            // Validar restricciones duras
-            if (isTeacherBusy(slot.docenteId, day, m)) continue;
-            
-            let groupBusy = false;
-            const slotGIds = slot.grupoIds || [];
-            if (slotGIds.length > 0) {
-              for (const gId of slotGIds) {
-                if (isGroupBusy(gId, day, m)) {
-                  groupBusy = true;
-                  break;
-                }
-              }
-            } else if (slot.grupoId) {
-              if (isGroupBusy(slot.grupoId, day, m)) groupBusy = true;
-            }
-            if (groupBusy) continue;
+            const tempState = [...slotsState, { ...slot, dia: day, moduloIndex: m }];
+            const conf = getSlotConflicts(slotsState.length, day, m, tempState);
 
-            let spaceBusy = false;
-            const slotSpcIds = slot.espacioIds || [];
-            if (slotSpcIds.length > 0) {
-              for (const spId of slotSpcIds) {
-                if (isSpaceBusy(spId, day, m)) {
-                  spaceBusy = true;
-                  break;
-                }
-              }
-            } else if (slot.espacioId) {
-              if (isSpaceBusy(slot.espacioId, day, m)) spaceBusy = true;
-            }
-            if (spaceBusy) continue;
-
-            if (!isTeacherAvailable(slot.docenteId, day, m)) continue;
-
-            // Evaluar restricciones preferenciales
-            let score = 0;
-
-            // 1. Contigüidad del Grupo (evitar huecos)
-            let groupAdjacent = false;
-            if (slotGIds.length > 0) {
-              groupAdjacent = placedSlots.some(s => 
-                s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1) &&
-                (s.grupoIds || (s.grupoId ? [s.grupoId] : [])).some(gId => slotGIds.includes(gId))
-              );
-            } else if (slot.grupoId) {
-              groupAdjacent = placedSlots.some(s => 
-                s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1) &&
-                (s.grupoId === slot.grupoId || (s.grupoIds || []).includes(slot.grupoId))
-              );
-            }
-            if (groupAdjacent) score += 40;
-
-            // 2. Contigüidad del Docente
-            const teacherAdjacent = placedSlots.some(s => 
-              s.docenteId === slot.docenteId && s.dia === day && (s.moduloIndex === m - 1 || s.moduloIndex === m + 1)
-            );
-            if (teacherAdjacent) score += 25;
-
-            // 3. Distribución de materias en la semana (no apilar la misma materia en un solo día)
-            let dayMatCount = 0;
-            if (slotGIds.length > 0) {
-              dayMatCount = placedSlots.filter(s => 
-                s.materiaId === slot.materiaId && s.dia === day &&
-                (s.grupoIds || (s.grupoId ? [s.grupoId] : [])).some(gId => slotGIds.includes(gId))
-              ).length;
-            } else if (slot.grupoId) {
-              dayMatCount = placedSlots.filter(s => 
-                s.materiaId === slot.materiaId && s.dia === day &&
-                (s.grupoId === slot.grupoId || (s.grupoIds || []).includes(slot.grupoId))
-              ).length;
-            }
-            score -= dayMatCount * 50;
-
-            // 4. Preferencia a primeras horas
-            score += (numModulos - m) * 2;
-
-            if (score > bestScore) {
-              bestScore = score;
+            if (conf < minConf) {
+              minConf = conf;
               bestDay = day;
-              bestMod = m;
+              bestM = m;
             }
           }
         });
 
-        if (bestDay !== null && bestMod !== null) {
-          placedSlots.push({
-            ...slot,
-            dia: bestDay,
-            moduloIndex: bestMod
-          });
-        } else {
-          unplacedSlots.push(slot);
-        }
+        slotsState.push({
+          ...slot,
+          dia: bestDay,
+          moduloIndex: bestM
+        });
       });
 
-      // Calcular calidad y horas muertas (huecos)
+      // Bucle de reparación iterativa (Min-Conflicts)
+      let maxIterations = 1000;
+      let iteration = 0;
+
+      while (iteration < maxIterations) {
+        let conflictingIndices = [];
+        for (let i = 0; i < slotsState.length; i++) {
+          const c = getSlotConflicts(i, slotsState[i].dia, slotsState[i].moduloIndex, slotsState);
+          if (c > 0) {
+            conflictingIndices.push(i);
+          }
+        }
+
+        if (conflictingIndices.length === 0) {
+          break; // Solución perfecta sin conflictos
+        }
+
+        const randIdx = conflictingIndices[Math.floor(Math.random() * conflictingIndices.length)];
+        const slotToRepair = slotsState[randIdx];
+
+        let bestDay = slotToRepair.dia;
+        let bestM = slotToRepair.moduloIndex;
+        let minConf = getSlotConflicts(randIdx, bestDay, bestM, slotsState);
+
+        dias.forEach(day => {
+          for (let m = 0; m < numModulos; m++) {
+            if (day === slotToRepair.dia && m === slotToRepair.moduloIndex) continue;
+
+            const conf = getSlotConflicts(randIdx, day, m, slotsState);
+            if (conf < minConf) {
+              minConf = conf;
+              bestDay = day;
+              bestM = m;
+            } else if (conf === minConf && Math.random() < 0.2) {
+              bestDay = day;
+              bestM = m;
+            }
+          }
+        });
+
+        slotsState[randIdx].dia = bestDay;
+        slotsState[randIdx].moduloIndex = bestM;
+        iteration++;
+      }
+
+      // 3. Separar los slots válidos (sin conflictos duros) y pendientes
+      let placedSlots = [];
+      let unplacedSlots = [];
+
+      for (let i = 0; i < slotsState.length; i++) {
+        const conf = getSlotConflicts(i, slotsState[i].dia, slotsState[i].moduloIndex, slotsState);
+        // Filtramos para permitir solo slots sin conflictos duros (peso >= 1000 representa choques)
+        if (conf < 500) {
+          placedSlots.push(slotsState[i]);
+        } else {
+          unplacedSlots.push(slotsState[i]);
+        }
+      }
+
+      // Calcular calidad y huecos (gaps) para grupos
       let gapCount = 0;
       grupos.forEach(g => {
         dias.forEach(day => {
