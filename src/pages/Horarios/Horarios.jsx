@@ -701,13 +701,14 @@ const Horarios = () => {
       const checkNeedsDoubleModule = (materiaNombre, horasSemanales, espacioRequerido) => {
         if (!materiaNombre) return false;
         const nameLower = materiaNombre.toLowerCase();
-        const isDoubleSubject = nameLower.includes('fisica') || 
+        const isDoubleSubject = (nameLower.includes('fisica') || 
                                 nameLower.includes('física') || 
                                 nameLower.includes('quimica') || 
                                 nameLower.includes('química') || 
                                 nameLower.includes('taller') || 
                                 nameLower.includes('tecnologia') || 
-                                nameLower.includes('tecnología');
+                                nameLower.includes('tecnología')) && 
+                                !nameLower.includes('edu');
         
         // Requieren estar en bloques de 2 horas
         return isDoubleSubject && horasSemanales >= 2;
@@ -816,14 +817,27 @@ const Horarios = () => {
       };
 
       slotsToPlace.sort((a, b) => {
+        // 1. Materias compartidas entre múltiples grupos (Talleres) van PRIMERO
+        const sharedA = (a.grupoIds && a.grupoIds.length > 1) ? 1 : 0;
+        const sharedB = (b.grupoIds && b.grupoIds.length > 1) ? 1 : 0;
+        if (sharedA !== sharedB) return sharedB - sharedA;
+
+        // 2. Materias que requieren bloques dobles van DESPUÉS de las compartidas
+        const doubleA = a.needsDouble ? 1 : 0;
+        const doubleB = b.needsDouble ? 1 : 0;
+        if (doubleA !== doubleB) return doubleB - doubleA;
+
+        // 3. Prioridad del Docente
         const prioA = teacherPriorityVal(a.docenteId);
         const prioB = teacherPriorityVal(b.docenteId);
         if (prioA !== prioB) return prioB - prioA;
 
+        // 4. Disponibilidad del Docente
         const availA = teacherAvailabilityCount(a.docenteId);
         const availB = teacherAvailabilityCount(b.docenteId);
         if (availA !== availB) return availA - availB;
 
+        // 5. Requisitos de Espacio
         const spaceA = a.espacioIds && a.espacioIds.some(spId => nonAulaSpaceIds.has(spId)) ? 1 : 0;
         const spaceB = b.espacioIds && b.espacioIds.some(spId => nonAulaSpaceIds.has(spId)) ? 1 : 0;
         if (spaceA !== spaceB) return spaceB - spaceA;
