@@ -946,7 +946,7 @@ const Horarios = () => {
       }
 
       // 3. Bucle de reparación iterativa (Min-Conflicts)
-      let maxIterations = 3000;
+      let maxIterations = 8000;
       let iteration = 0;
 
       while (iteration < maxIterations) {
@@ -1076,7 +1076,12 @@ const Horarios = () => {
       };
 
       await setDoc(doc(db, 'schools', schoolId, 'horarios_generados', 'current'), payload);
-      alert(`Generación completada. Eficiencia del ${qualityScore}% (${totalPlaced} horas colocadas de ${totalRequested}).`);
+      
+      if (unplacedSlots.length > 0) {
+        alert(`Generación completada con ${qualityScore}% de eficiencia.\n\n⚠️ ATENCIÓN: Quedaron ${unplacedSlots.length} horas sin asignar debido a empalmes inevitables (saturación del maestro, de los laboratorios o disponibilidad restringida). Las clases empalmadas fueron enviadas a la sección de horas pendientes y no se agregaron a la cuadrícula.`);
+      } else {
+        alert(`¡Generación completada con éxito! Eficiencia del ${qualityScore}% (${totalPlaced} horas colocadas de ${totalRequested}).`);
+      }
     } catch (e) {
       console.error(e);
       alert('Error en el motor de generación horaria.');
