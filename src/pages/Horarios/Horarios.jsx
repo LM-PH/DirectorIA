@@ -729,7 +729,7 @@ const Horarios = () => {
           : [asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])];
 
         const numGroupsForDivision = asig.grupoIds?.length || 1;
-        const hoursPerGroup = numGroupsForDivision > 1 
+        const hoursPerGroup = (numGroupsForDivision > 1 && !isTaller)
           ? Math.max(1, Math.floor(hours / numGroupsForDivision))
           : hours;
 
