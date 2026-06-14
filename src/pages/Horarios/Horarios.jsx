@@ -716,25 +716,50 @@ const Horarios = () => {
         const espacioReq = mat?.espacioRequerido || 'Aula';
         const needsDouble = checkNeedsDoubleModule(asig.materiaNombre, hours, espacioReq);
         
-        for (let h = 0; h < hours; h++) {
-          slotsToPlace.push({
-            id: `${asig.id}-${h}`,
-            asigId: asig.id,
-            docenteId: asig.docenteId,
-            docenteNombre: asig.docenteNombre,
-            materiaId: asig.materiaId,
-            materiaNombre: asig.materiaNombre,
-            grupoId: asig.grupoIds?.[0] || asig.grupoId || '',
-            grupoIds: asig.grupoIds || (asig.grupoId ? [asig.grupoId] : []),
-            grupoNombre: asig.grupoNombre,
-            espacioId: asig.espacioIds?.[0] || asig.espacioId || '',
-            espacioIds: asig.espacioIds || (asig.espacioId ? [asig.espacioId] : []),
-            espacioNombre: asig.espacioNombre || '',
-            horasSemanales: hours,
-            espacioRequerido: espacioReq,
-            needsDouble
-          });
-        }
+        // Si tiene múltiples grupos y NO es taller, separar en slots individuales por grupo
+        const isTaller = asig.materiaNombre.toLowerCase().includes('taller');
+        const groupsToProcess = (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) 
+          ? asig.grupoIds.map(gId => [gId]) 
+          : [asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])];
+
+        groupsToProcess.forEach((gIds, gIndex) => {
+          const mainGroupId = gIds[0] || '';
+          let gName = asig.grupoNombre;
+          if (!isTaller && asig.grupoIds?.length > 1) {
+            const gObj = grupos.find(g => g.id === mainGroupId);
+            if (gObj) gName = `${gObj.grado}°${gObj.grupo}`;
+          }
+
+          const eIds = asig.espacioIds || (asig.espacioId ? [asig.espacioId] : []);
+          let assignedSpaceIds = eIds;
+          let assignedSpaceName = asig.espacioNombre;
+          
+          if (!isTaller && asig.grupoIds?.length > 1 && eIds.length > 1 && eIds.length === asig.grupoIds.length) {
+            assignedSpaceIds = [eIds[gIndex]];
+            const sObj = espacios.find(e => e.id === eIds[gIndex]);
+            assignedSpaceName = sObj ? sObj.nombre : asig.espacioNombre;
+          }
+
+          for (let h = 0; h < hours; h++) {
+            slotsToPlace.push({
+              id: `${asig.id}-g${gIndex}-${h}`,
+              asigId: asig.id,
+              docenteId: asig.docenteId,
+              docenteNombre: asig.docenteNombre,
+              materiaId: asig.materiaId,
+              materiaNombre: asig.materiaNombre,
+              grupoId: mainGroupId,
+              grupoIds: gIds,
+              grupoNombre: gName,
+              espacioId: assignedSpaceIds[0] || '',
+              espacioIds: assignedSpaceIds,
+              espacioNombre: assignedSpaceName,
+              horasSemanales: hours,
+              espacioRequerido: espacioReq,
+              needsDouble
+            });
+          }
+        });
       });
 
       // Heurística de ordenación MRV (Minimum Remaining Values)
@@ -781,9 +806,9 @@ const Horarios = () => {
         let hardConf = 0;
         let softConf = 0;
 
-        let teacherClash = false;
-        let groupClash = false;
-        let spaceClash = false;
+        let teacherClashCount = 0;
+        let groupClashCount = 0;
+        let spaceClashCount = 0;
         let sameDayMatCount = 0;
         let isConsecutiveSameDay = false;
         
@@ -798,17 +823,17 @@ const Horarios = () => {
 
           // 1. Cruce Docente
           if (s.dia === day && s.moduloIndex === m && isSameTeacher(s, slot)) {
-            teacherClash = true;
+            teacherClashCount++;
           }
 
           // 2. Cruce Grupo
           if (s.dia === day && s.moduloIndex === m && shareGroup(s, slot)) {
-            groupClash = true;
+            groupClashCount++;
           }
 
           // 3. Cruce Espacio
           if (s.dia === day && s.moduloIndex === m && shareSpace(s, slot, nonAulaSpaceIds)) {
-            spaceClash = true;
+            spaceClashCount++;
           }
 
           // 4. Materia del mismo grupo en el mismo día
@@ -832,9 +857,9 @@ const Horarios = () => {
           materiaModsByDay[day].push(m);
         }
 
-        if (teacherClash) hardConf += 1;
-        if (groupClash) hardConf += 1;
-        if (spaceClash) hardConf += 1;
+        hardConf += teacherClashCount;
+        hardConf += groupClashCount;
+        hardConf += spaceClashCount;
 
         // Disponibilidad de docente
         const docDisp = docenteDisponibilidadMap.get(slot.docenteId);
@@ -2681,7 +2706,7 @@ const Horarios = () => {
                                               >
                                                 <div className="class-card-subject" title={slot.materiaNombre}>{slot.materiaNombre}</div>
                                                 {viewFilterMode !== 'docente' && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
-                                                {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>Grupo: {slot.grupoNombre}</div>}
+                                                {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>{slot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {slot.grupoNombre}</div>}
                                                 
                                                 <div className="class-card-meta">
                                                   <span className="class-card-space" title={slot.espacioNombre || 'Aula'}>
@@ -2838,7 +2863,7 @@ const Horarios = () => {
                                             >
                                               <div className="gt-subject">{cellSlot.materiaNombre}</div>
                                               {timelineGlobalResource !== 'docente' && <div className="gt-docent">{cellSlot.docenteNombre}</div>}
-                                              {timelineGlobalResource !== 'grupo' && <div className="gt-docent" style={{ fontWeight: 'bold' }}>{cellSlot.grupoNombre}</div>}
+                                              {timelineGlobalResource !== 'grupo' && <div className="gt-docent" style={{ fontWeight: 'bold' }}>{cellSlot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {cellSlot.grupoNombre}</div>}
                                             </div>
                                           );
                                         })}
