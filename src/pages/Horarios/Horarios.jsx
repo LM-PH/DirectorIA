@@ -661,12 +661,7 @@ const Horarios = () => {
   };
 
   const getRealHoursForAsig = (asig) => {
-    const hours = Number(asig.horasSemanales || 1);
-    const isTaller = asig.materiaNombre?.toLowerCase().includes('taller') || false;
-    if (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) {
-      return hours * asig.grupoIds.length;
-    }
-    return hours;
+    return Number(asig.horasSemanales || 1);
   };
 
   const shareSpace = (s1, s2, nonAulas = null) => {
@@ -725,11 +720,16 @@ const Horarios = () => {
         const espacioReq = mat?.espacioRequerido || 'Aula';
         const needsDouble = checkNeedsDoubleModule(asig.materiaNombre, hours, espacioReq);
         
-        // Si tiene múltiples grupos y NO es taller, separar en slots individuales por grupo
-        const isTaller = asig.materiaNombre.toLowerCase().includes('taller');
+        // Si tiene múltiples grupos y NO es taller/tecnología, separar en slots individuales por grupo
+        const nameLower = asig.materiaNombre.toLowerCase();
+        const isTaller = nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
         const groupsToProcess = (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) 
           ? asig.grupoIds.map(gId => [gId]) 
           : [asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])];
+
+        const hoursPerGroup = (!isTaller && asig.grupoIds?.length > 1) 
+          ? Math.max(1, Math.floor(hours / asig.grupoIds.length))
+          : hours;
 
         groupsToProcess.forEach((gIds, gIndex) => {
           const mainGroupId = gIds[0] || '';
@@ -770,7 +770,7 @@ const Horarios = () => {
             }
           }
 
-          for (let h = 0; h < hours; h++) {
+          for (let h = 0; h < hoursPerGroup; h++) {
             slotsToPlace.push({
               id: `${asig.id}-g${gIndex}-${h}`,
               asigId: asig.id,
@@ -784,7 +784,7 @@ const Horarios = () => {
               espacioId: assignedSpaceIds[0] || '',
               espacioIds: assignedSpaceIds,
               espacioNombre: assignedSpaceName,
-              horasSemanales: hours,
+              horasSemanales: hoursPerGroup,
               espacioRequerido: espacioReq,
               needsDouble
             });
@@ -2187,20 +2187,26 @@ const Horarios = () => {
                 </thead>
                 <tbody>
                   {asignaciones.map(a => {
-                    const getRealHoursForAsig = (asig) => (asig.horasSemanales || 0) * (asig.grupoIds?.length || 1);
+                    const hours = Number(a.horasSemanales || 0);
+                    const numGroups = a.grupoIds?.length || 1;
+                    const nameLower = (a.materiaNombre || '').toLowerCase();
+                    const isTaller = nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
+                    const isSplit = !isTaller && numGroups > 1;
+                    const hoursPerGroup = isSplit ? Math.max(1, Math.floor(hours / numGroups)) : hours;
+                    
                     return (
                       <tr key={a.id}>
                         <td><strong>{a.docenteNombre}</strong></td>
                         <td>{a.materiaNombre}</td>
                         <td><span className="badge badge-info">{a.grupoNombre}</span></td>
                         <td className="text-center">
-                          {a.grupoIds && a.grupoIds.length > 1 ? (
+                          {isSplit ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <span>{a.horasSemanales} hrs/sem <small className="text-muted">(x{a.grupoIds.length})</small></span>
-                              <span style={{ fontWeight: '600', color: '#0f172a', fontSize: '0.85rem' }}>Total: {getRealHoursForAsig(a)} hrs</span>
+                              <span style={{ fontWeight: '600', color: '#0f172a' }}>{hours} hrs total</span>
+                              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>({hoursPerGroup} hrs x {numGroups} grupos)</span>
                             </div>
                           ) : (
-                            <span>{a.horasSemanales} hrs/sem</span>
+                            <span>{hours} hrs/sem {isTaller && numGroups > 1 ? <small className="text-muted">(Compartida)</small> : ''}</span>
                           )}
                         </td>
                         <td>{a.espacioNombre || <span className="text-muted">No requerido (Aula)</span>}</td>
@@ -2223,7 +2229,7 @@ const Horarios = () => {
 
               {/* MODAL REGISTRO ASIGNACIÓN */}
               {modalOpen.asignacion && (() => {
-                const getRealHoursForAsig = (asig) => (asig.horasSemanales || 0) * (asig.grupoIds?.length || 1);
+                const getRealHoursForAsig = (asig) => Number(asig.horasSemanales || 0);
                 const selectedDocenteObj = docentes.find(d => d.id === formAsignacion.docenteId);
                 const totalDocenteHours = selectedDocenteObj ? Number(selectedDocenteObj.horasAsignadas || 0) : 0;
                 const assignedHours = asignaciones
