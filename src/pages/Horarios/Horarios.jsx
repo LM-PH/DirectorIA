@@ -721,15 +721,15 @@ const Horarios = () => {
         const espacioReq = mat?.espacioRequerido || 'Aula';
         const needsDouble = checkNeedsDoubleModule(asig.materiaNombre, hours, espacioReq);
         
-        // Si tiene múltiples grupos y NO es taller/tecnología, separar en slots individuales por grupo
         const nameLower = asig.materiaNombre.toLowerCase();
         const isTaller = nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
         const groupsToProcess = (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) 
           ? asig.grupoIds.map(gId => [gId]) 
           : [asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])];
 
-        const hoursPerGroup = (!isTaller && asig.grupoIds?.length > 1) 
-          ? Math.max(1, Math.floor(hours / asig.grupoIds.length))
+        const numGroupsForDivision = asig.grupoIds?.length || 1;
+        const hoursPerGroup = numGroupsForDivision > 1 
+          ? Math.max(1, Math.floor(hours / numGroupsForDivision))
           : hours;
 
         groupsToProcess.forEach((gIds, gIndex) => {
@@ -898,16 +898,17 @@ const Horarios = () => {
           hardConf += 1;
         }
 
-        // Límite de materia por día (> 2 horas es penalización)
-        if (sameDayMatCount >= 2) softConf += 200;
-
-        // Consecutividad: si hay más de 1 hora del mismo grupo/materia el mismo día, deben ser consecutivas
-        if (sameDayMatCount > 0 && !isConsecutiveSameDay) {
-          softConf += 400;
-        }
-
-        // Conteo de parejas de horas consecutivas semanales (bloques dobles)
+        // Reglas de Distribución Semanal y Módulos Dobles
         if (slot.needsDouble) {
+          // Materias de ciencias/talleres: Permitimos hasta 2 horas al día para formar bloques dobles
+          if (sameDayMatCount >= 2) {
+            softConf += 800; // Penalizamos si intenta meter una 3ra hora el mismo día
+          }
+          if (sameDayMatCount === 1 && !isConsecutiveSameDay) {
+            softConf += 400; // Si hay 2 horas el mismo día, DEBEN ser consecutivas
+          }
+          
+          // Conteo de parejas de horas consecutivas semanales (bloques dobles)
           let doublePairs = 0;
           Object.keys(materiaModsByDay).forEach(dKey => {
             const mods = materiaModsByDay[dKey].sort((a, b) => a - b);
@@ -918,7 +919,12 @@ const Horarios = () => {
             }
           });
           if (doublePairs === 0) {
-            softConf += 150;
+            softConf += 150; // Pequeño empuje para forzar que al menos forme un bloque doble
+          }
+        } else {
+          // Español, Matemáticas y materias normales: DEBEN estar esparcidas (1 hora al día máximo)
+          if (sameDayMatCount >= 1) {
+            softConf += 1000; // Penalización altísima para evitar poner dos horas el mismo día
           }
         }
 
@@ -2193,7 +2199,7 @@ const Horarios = () => {
                     const nameLower = (a.materiaNombre || '').toLowerCase();
                     const isTaller = nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
                     const isSplit = !isTaller && numGroups > 1;
-                    const hoursPerGroup = isSplit ? Math.max(1, Math.floor(hours / numGroups)) : hours;
+                    const hoursPerGroup = numGroups > 1 ? Math.max(1, Math.floor(hours / numGroups)) : hours;
                     
                     return (
                       <tr key={a.id}>
