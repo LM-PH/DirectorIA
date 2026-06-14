@@ -845,7 +845,91 @@ const Horarios = () => {
         return 0;
       });
 
-      // Evaluador detallado de colisiones
+      // Variables para alinear talleres
+      const tallerAlignmentMap = {}; // key: grupoIds string, value: array de {dia, m} por horaIndex
+
+      slotsToPlace.forEach((slot, i) => {
+        let bestCells = [];
+        let minScore = Infinity;
+
+        const nameLower = slot.materiaNombre.toLowerCase();
+        const isTaller = nameLower.includes('taller') || nameLower.includes('tecnolog');
+        const tKey = isTaller ? (slot.grupoIds || []).slice().sort().join(',') : null;
+        
+        // Extraer el índice de la hora (h) del id del slot (ej: "asigId-g0-3" -> 3)
+        const parts = slot.id.split('-');
+        const slotHourIndex = parseInt(parts[parts.length - 1]);
+
+        // Si es taller y ya tenemos una celda para esta hora específica de este bloque de grupos, la forzamos
+        if (isTaller && tallerAlignmentMap[tKey] && tallerAlignmentMap[tKey][slotHourIndex]) {
+          bestCells = [tallerAlignmentMap[tKey][slotHourIndex]];
+          minScore = 0;
+        } else {
+          dias.forEach(day => {
+            for (let m = 0; m < modulosSemanales; m++) {
+              if (m === modulosAntesDeReceso) return; 
+
+              let score = 0;
+              let isHardConflict = false;
+
+              // Choque docente
+              const docBusy = slotsState.some(s => s.dia === day && s.moduloIndex === m && isSameTeacher(s, slot));
+              if (docBusy) { score += 10000; isHardConflict = true; }
+
+              // Choque grupo (ignorar si AMBOS son talleres)
+              const grpBusy = slotsState.some(s => {
+                if (s.dia === day && s.moduloIndex === m && shareGroup(s, slot)) {
+                  const sIsTaller = s.materiaNombre.toLowerCase().includes('taller') || s.materiaNombre.toLowerCase().includes('tecnolog');
+                  if (isTaller && sIsTaller) return false; // Se permiten empalmar talleres
+                  return true;
+                }
+                return false;
+              });
+              if (grpBusy) { score += 10000; isHardConflict = true; }
+
+              // Choque espacio
+              const spcBusy = slotsState.some(s => s.dia === day && s.moduloIndex === m && shareSpace(s, slot, nonAulaSpaceIds));
+              if (spcBusy) { score += 10000; isHardConflict = true; }
+
+              const docDisp = docenteDisponibilidadMap.get(slot.docenteId);
+              if (docDisp?.[day]?.[m] === false) {
+                score += 10000; isHardConflict = true;
+              }
+
+              if (!isHardConflict) {
+                bestCells.push({ day, m });
+              }
+
+              if (score < minScore) {
+                minScore = score;
+                bestCells = [{ day, m }];
+              } else if (score === minScore) {
+                bestCells.push({ day, m });
+              }
+            }
+          });
+        }
+
+        const chosenCell = bestCells.length > 0 
+          ? bestCells[Math.floor(Math.random() * bestCells.length)]
+          : { day: dias[0], m: 0 }; // Fallback
+
+        slotsState.push({
+          ...slot,
+          dia: chosenCell.day,
+          moduloIndex: chosenCell.m
+        });
+
+        // Registrar la celda para alinear futuros talleres del mismo bloque
+        if (isTaller) {
+          if (!tallerAlignmentMap[tKey]) tallerAlignmentMap[tKey] = [];
+          tallerAlignmentMap[tKey][slotHourIndex] = chosenCell;
+        }
+      });
+
+      // 3. Min-Conflicts Optimization
+      let iteration = 0;
+      
       const getSlotConflictsDetailed = (sIdx, day, m, currentState) => {
         const slot = currentState[sIdx];
         let hardConf = 0;
@@ -857,6 +941,11 @@ const Horarios = () => {
         let sameDayMatCount = 0;
         let isConsecutiveSameDay = false;
         
+        const slotNameLower = slot.materiaNombre.toLowerCase();
+        const slotIsTaller = slotNameLower.includes('taller') || slotNameLower.includes('tecnolog');
+        const slotTKey = slotIsTaller ? (slot.grupoIds || []).slice().sort().join(',') : null;
+        const slotHourIndex = parseInt(slot.id.split('-').pop());
+
         const materiaModsByDay = {
           'Lunes': [], 'Martes': [], 'Miércoles': [], 'Jueves': [], 'Viernes': [],
           'Sábado': [], 'Sábado ': [], 'Sábado': [], 'Sabado': [], 'Domingo': []
@@ -865,15 +954,34 @@ const Horarios = () => {
         for (let i = 0; i < currentState.length; i++) {
           if (i === sIdx) continue;
           const s = currentState[i];
+          const sNameLower = s.materiaNombre.toLowerCase();
+          const sIsTaller = sNameLower.includes('taller') || sNameLower.includes('tecnolog');
 
           // 1. Cruce Docente
           if (s.dia === day && s.moduloIndex === m && isSameTeacher(s, slot)) {
             teacherClashCount++;
           }
 
-          // 2. Cruce Grupo
+          // 2. Cruce Grupo (ignorar si ambos son talleres)
           if (s.dia === day && s.moduloIndex === m && shareGroup(s, slot)) {
-            groupClashCount++;
+            if (!(slotIsTaller && sIsTaller)) {
+              groupClashCount++;
+            }
+          }
+
+          // Alineación estricta de Talleres: si movemos un taller, penalizamos masivamente si no coincide
+          // con el horario original asignado al bloque.
+          if (slotIsTaller && sIsTaller) {
+            const sTKey = (s.grupoIds || []).slice().sort().join(',');
+            if (sTKey === slotTKey) {
+              const sHourIndex = parseInt(s.id.split('-').pop());
+              if (sHourIndex === slotHourIndex) {
+                // Deberían estar exactamente el mismo día y módulo
+                if (s.dia !== day || s.moduloIndex !== m) {
+                  softConf += 50000; // Penalización insuperable para evitar que se desalineen
+                }
+              }
+            }
           }
 
           // 3. Cruce Espacio
