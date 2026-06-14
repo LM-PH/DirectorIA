@@ -643,6 +643,9 @@ const Horarios = () => {
       let slotsToPlace = [];
       asignaciones.forEach(asig => {
         const hours = Number(asig.horasSemanales || 1);
+        const mat = materias.find(m => m.id === asig.materiaId);
+        const espacioReq = mat?.espacioRequerido || 'Aula';
+        
         for (let h = 0; h < hours; h++) {
           slotsToPlace.push({
             id: `${asig.id}-${h}`,
@@ -656,7 +659,9 @@ const Horarios = () => {
             grupoNombre: asig.grupoNombre,
             espacioId: asig.espacioIds?.[0] || asig.espacioId || '',
             espacioIds: asig.espacioIds || (asig.espacioId ? [asig.espacioId] : []),
-            espacioNombre: asig.espacioNombre || ''
+            espacioNombre: asig.espacioNombre || '',
+            horasSemanales: hours,
+            espacioRequerido: espacioReq
           });
         }
       });
@@ -701,6 +706,21 @@ const Horarios = () => {
 
         return 0;
       });
+
+      // Helper para determinar si una materia requiere un bloque doble
+      const needsDoubleModule = (materiaNombre, horasSemanales, espacioRequerido) => {
+        if (!materiaNombre) return false;
+        const nameLower = materiaNombre.toLowerCase();
+        const isScience = nameLower.includes('fisica') || 
+                          nameLower.includes('física') || 
+                          nameLower.includes('quimica') || 
+                          nameLower.includes('química') || 
+                          nameLower.includes('biologia') || 
+                          nameLower.includes('biología') || 
+                          nameLower.includes('ciencias') || 
+                          espacioRequerido === 'Laboratorio';
+        return isScience && horasSemanales >= 4;
+      };
 
       // 2. Resolver con algoritmo Min-Conflicts (Iterative Repair CSP)
       let slotsState = [];
@@ -761,6 +781,53 @@ const Horarios = () => {
           }
         }
         if (maxSubjectDailyClash) conf += 200; // Penalización fuerte para distribuir la materia
+
+        // 5.1 Consecutividad obligatoria: si hay más de 1 hora de una materia el mismo día, deben ser consecutivas
+        if (slotGIds.length > 0) {
+          for (const gId of slotGIds) {
+            const sameDaySlots = currentState.filter((s, idx) => 
+              idx !== sIdx && 
+              s.materiaId === slot.materiaId && 
+              s.dia === day && 
+              (s.grupoIds || []).includes(gId)
+            );
+            if (sameDaySlots.length > 0) {
+              const isConsecutive = sameDaySlots.some(s => s.moduloIndex === m - 1 || s.moduloIndex === m + 1);
+              if (!isConsecutive) {
+                conf += 400; // Penalización alta si están separadas en el mismo día (ej: M1 y M5)
+              }
+            }
+          }
+        }
+
+        // 5.2 Incentivo de sesión doble para materias de Ciencias / Laboratorio
+        if (needsDoubleModule(slot.materiaNombre, slot.horasSemanales, slot.espacioRequerido)) {
+          let doubleModuleCount = 0;
+          if (slotGIds.length > 0) {
+            for (const gId of slotGIds) {
+              const dayMap = {};
+              currentState.forEach(s => {
+                if (s.materiaId === slot.materiaId && (s.grupoIds || []).includes(gId)) {
+                  if (!dayMap[s.dia]) dayMap[s.dia] = [];
+                  dayMap[s.dia].push(s.moduloIndex);
+                }
+              });
+              
+              Object.keys(dayMap).forEach(dayKey => {
+                const mods = dayMap[dayKey].sort((a, b) => a - b);
+                for (let idx = 0; idx < mods.length - 1; idx++) {
+                  if (mods[idx+1] - mods[idx] === 1) {
+                    doubleModuleCount++;
+                  }
+                }
+              });
+            }
+          }
+          
+          if (doubleModuleCount === 0) {
+            conf += 150; // Penalización si la materia científica no tiene ningún bloque doble (2 horas continuas)
+          }
+        }
 
         // 6. Evitar horas consecutivas excesivas para el docente
         const adjacentTeach = currentState.filter((s, idx) => 
