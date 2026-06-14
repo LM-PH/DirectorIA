@@ -734,10 +734,31 @@ const Horarios = () => {
           let assignedSpaceIds = eIds;
           let assignedSpaceName = asig.espacioNombre;
           
-          if (!isTaller && asig.grupoIds?.length > 1 && eIds.length > 1 && eIds.length === asig.grupoIds.length) {
-            assignedSpaceIds = [eIds[gIndex]];
-            const sObj = espacios.find(e => e.id === eIds[gIndex]);
-            assignedSpaceName = sObj ? sObj.nombre : asig.espacioNombre;
+          if (!isTaller && asig.grupoIds?.length > 1 && eIds.length > 1) {
+            // Intentar emparejar el espacio con el grupo basándose en el nombre
+            const gObjForMatch = grupos.find(g => g.id === mainGroupId);
+            let matchedSpaceId = null;
+            if (gObjForMatch) {
+              const expectedSpaceName1 = `${gObjForMatch.grado} ${gObjForMatch.grupo}`.toLowerCase(); // "1 a"
+              const expectedSpaceName2 = `${gObjForMatch.grado}°${gObjForMatch.grupo}`.toLowerCase(); // "1°a"
+              const matchedSpace = espacios.find(e => eIds.includes(e.id) && (
+                e.nombre.toLowerCase().includes(expectedSpaceName1) || 
+                e.nombre.toLowerCase().includes(expectedSpaceName2)
+              ));
+              if (matchedSpace) {
+                matchedSpaceId = matchedSpace.id;
+              }
+            }
+            // Si no hay coincidencia exacta por nombre y las longitudes coinciden, usar el índice (fallback)
+            if (!matchedSpaceId && eIds.length === asig.grupoIds.length) {
+              matchedSpaceId = eIds[gIndex];
+            }
+            // Si encontramos un ID, asignar ese espacio únicamente
+            if (matchedSpaceId) {
+              assignedSpaceIds = [matchedSpaceId];
+              const sObj = espacios.find(e => e.id === matchedSpaceId);
+              assignedSpaceName = sObj ? sObj.nombre : asig.espacioNombre;
+            }
           }
 
           for (let h = 0; h < hours; h++) {
