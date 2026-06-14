@@ -2291,7 +2291,7 @@ const Horarios = () => {
                             </div>
                             {isOverHours && (
                               <div style={{ color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', marginTop: '6px', fontWeight: '500' }}>
-                                <AlertTriangle size={14} />
+                                <AlertCircle size={14} />
                                 <span>Con esta asignación ({currentAsigHours} hrs reales) sumará {newTotalHours} hrs, superando su plaza ({totalDocenteHours} hrs).</span>
                               </div>
                             )}
