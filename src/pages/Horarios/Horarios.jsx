@@ -1011,19 +1011,50 @@ const Horarios = () => {
           bestCells = [tallerAlignmentMap[tKey][slotHourIndex]];
           minScore = 0;
         } else {
-          dias.forEach(day => {
-            for (let m = 0; m < numModulos; m++) {
-              const tempState = [...slotsState, { ...slot, dia: day, moduloIndex: m }];
-              const scoreObj = getSlotConflictsDetailed(slotsState.length, day, m, tempState);
-
-              if (scoreObj.total < minScore) {
-                minScore = scoreObj.total;
-                bestCells = [{ day, m }];
-              } else if (scoreObj.total === minScore) {
-                bestCells.push({ day, m });
+          let forcedConsecutive = false;
+          if (isTaller && slot.needsDouble && slotHourIndex % 2 === 1) {
+            // Es el líder de un bloque doble de taller. Forzarlo consecutivo a la hora anterior para que nazca como módulo doble.
+            const prevHourCell = tallerAlignmentMap[tKey]?.[slotHourIndex - 1];
+            if (prevHourCell) {
+              const forcedM = prevHourCell.m + 1;
+              // Verificar que no cruce el receso ni se salga del día
+              if (forcedM < numModulos && forcedM !== modulosAntesDeReceso && prevHourCell.m !== modulosAntesDeReceso - 1) {
+                // Verificar choque global con talleres de OTRO grado
+                const globalClash = slotsState.some(s => {
+                  if (s.dia === prevHourCell.day && s.moduloIndex === forcedM) {
+                    const sn = s.materiaNombre.toLowerCase();
+                    if (sn.includes('taller') || sn.includes('tecnolog')) {
+                      const stk = (s.grupoIds || []).slice().sort().join(',');
+                      if (stk !== tKey) return true;
+                    }
+                  }
+                  return false;
+                });
+                
+                if (!globalClash) {
+                  bestCells = [{ day: prevHourCell.day, m: forcedM }];
+                  minScore = 0;
+                  forcedConsecutive = true;
+                }
               }
             }
-          });
+          }
+
+          if (!forcedConsecutive) {
+            dias.forEach(day => {
+              for (let m = 0; m < numModulos; m++) {
+                const tempState = [...slotsState, { ...slot, dia: day, moduloIndex: m }];
+                const scoreObj = getSlotConflictsDetailed(slotsState.length, day, m, tempState);
+
+                if (scoreObj.total < minScore) {
+                  minScore = scoreObj.total;
+                  bestCells = [{ day, m }];
+                } else if (scoreObj.total === minScore) {
+                  bestCells.push({ day, m });
+                }
+              }
+            });
+          }
         }
 
         const chosenCell = bestCells.length > 0 
