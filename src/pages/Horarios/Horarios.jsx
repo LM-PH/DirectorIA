@@ -723,7 +723,7 @@ const Horarios = () => {
         const needsDouble = checkNeedsDoubleModule(asig.materiaNombre, hours, espacioReq);
         
         const nameLower = asig.materiaNombre.toLowerCase();
-        const isTaller = nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
+        const isTaller = (espacioReq === 'Taller') || nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
         const groupsToProcess = (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) 
           ? asig.grupoIds.map(gId => [gId]) 
           : [asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])];
@@ -862,7 +862,7 @@ const Horarios = () => {
         let isConsecutiveSameDay = false;
         
         const slotNameLower = slot.materiaNombre.toLowerCase();
-        const slotIsTaller = slotNameLower.includes('taller') || slotNameLower.includes('tecnolog');
+        const slotIsTaller = (slot.espacioRequerido === 'Taller') || slotNameLower.includes('taller') || slotNameLower.includes('tecnolog');
         const slotTKey = slotIsTaller ? (slot.grupoIds || []).slice().sort().join(',') : null;
         const slotHourIndex = parseInt(slot.id.split('-').pop());
 
@@ -875,7 +875,7 @@ const Horarios = () => {
           if (i === sIdx) continue;
           const s = currentState[i];
           const sNameLower = s.materiaNombre.toLowerCase();
-          const sIsTaller = sNameLower.includes('taller') || sNameLower.includes('tecnolog');
+          const sIsTaller = (s.espacioRequerido === 'Taller') || sNameLower.includes('taller') || sNameLower.includes('tecnolog');
 
           // 1. Cruce Docente
           if (s.dia === day && s.moduloIndex === m && isSameTeacher(s, slot)) {
@@ -999,7 +999,7 @@ const Horarios = () => {
         let minScore = 99999999;
 
         const nameLower = slot.materiaNombre.toLowerCase();
-        const isTaller = nameLower.includes('taller') || nameLower.includes('tecnolog');
+        const isTaller = (slot.espacioRequerido === 'Taller') || nameLower.includes('taller') || nameLower.includes('tecnolog');
         const tKey = isTaller ? (slot.grupoIds || []).slice().sort().join(',') : null;
         
         // Extraer el índice de la hora (h) del id del slot
@@ -1023,7 +1023,7 @@ const Horarios = () => {
                 const globalClash = slotsState.some(s => {
                   if (s.dia === prevHourCell.day && s.moduloIndex === forcedM) {
                     const sn = s.materiaNombre.toLowerCase();
-                    if (sn.includes('taller') || sn.includes('tecnolog')) {
+                    if (s.espacioRequerido === 'Taller' || sn.includes('taller') || sn.includes('tecnolog')) {
                       const stk = (s.grupoIds || []).slice().sort().join(',');
                       if (stk !== tKey) return true;
                     }
@@ -2300,7 +2300,7 @@ const Horarios = () => {
                     const hours = Number(a.horasSemanales || 0);
                     const numGroups = a.grupoIds?.length || 1;
                     const nameLower = (a.materiaNombre || '').toLowerCase();
-                    const isTaller = nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
+                    const isTaller = (materia?.espacioRequerido === 'Taller') || nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
                     const isSplit = !isTaller && numGroups > 1;
                     const hoursPerGroup = numGroups > 1 ? Math.max(1, Math.floor(hours / numGroups)) : hours;
                     
@@ -2882,7 +2882,7 @@ const Horarios = () => {
                                                 }}
                                               >
                                                 <div className="class-card-subject" title={slot.materiaNombre}>{slot.materiaNombre}</div>
-                                                {viewFilterMode !== 'docente' && !slot.materiaNombre.toLowerCase().includes('taller') && !slot.materiaNombre.toLowerCase().includes('tecnolog') && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
+                                                {viewFilterMode !== 'docente' && slot.espacioRequerido !== 'Taller' && !slot.materiaNombre.toLowerCase().includes('taller') && !slot.materiaNombre.toLowerCase().includes('tecnolog') && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
                                                 {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>{slot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {slot.grupoNombre}</div>}
                                                 
                                                 <div className="class-card-meta">
