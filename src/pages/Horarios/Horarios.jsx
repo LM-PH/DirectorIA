@@ -1064,14 +1064,15 @@ const Horarios = () => {
               }
             }
 
-            // 2. Penalizar si hay más de 2 horas de taller el mismo día (un solo bloque)
+            // 2. Prohibir absolutamente más de 2 horas de taller el mismo día (un solo bloque)
             if (sameDayMatCount >= 2) {
-              hardConf += 2;
+              hardConf += 10; // Castigo durísimo
             }
           } else {
-            // CIENCIAS (NORMAL DOUBLE BLOCKS): Reglas suaves
-            if (sameDayMatCount >= 2) softConf += 800; 
-            if (sameDayMatCount === 1 && !isConsecutiveSameDay) softConf += 400; 
+            // CIENCIAS (NORMAL DOUBLE BLOCKS): Física y Química
+            // Límite estricto de máximo 2 horas el mismo día
+            if (sameDayMatCount >= 2) hardConf += 10; 
+            if (sameDayMatCount === 1 && !isConsecutiveSameDay) softConf += 800; // Penalizar fuertemente si no son consecutivas
             
             let doublePairs = 0;
             Object.keys(materiaModsByDay).forEach(dKey => {
@@ -1080,12 +1081,13 @@ const Horarios = () => {
                 if (mods[idx+1] - mods[idx] === 1) doublePairs++;
               }
             });
-            if (doublePairs === 0) softConf += 150; 
+            if (doublePairs === 0) softConf += 300; 
           }
         } else {
           // Español, Matemáticas y materias normales: DEBEN estar esparcidas (1 hora al día máximo)
+          // Límite matemático estricto: Prohibido más de 1 hora al día
           if (sameDayMatCount >= 1) {
-            softConf += 1000; // Penalización altísima para evitar poner dos horas el mismo día
+            hardConf += 10; // Castigo durísimo para obligar a esparcirlas
           }
         }
 
