@@ -690,6 +690,16 @@ const Horarios = () => {
       const numModulos = Number(config.numModulos) || 6;
       const dias = config.diasSemana || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
+      // Calcular modulosAntesDeReceso
+      let modulosAntesDeReceso = 3; // Valor por defecto
+      if (config.horaEntrada && config.recesoInicio && config.duracionModulo) {
+        const [he, me] = config.horaEntrada.split(':').map(Number);
+        const [hr, mr] = config.recesoInicio.split(':').map(Number);
+        const startMins = he * 60 + me;
+        const recesoMins = hr * 60 + mr;
+        modulosAntesDeReceso = Math.floor((recesoMins - startMins) / config.duracionModulo);
+      }
+
       // Estructuras auxiliares para velocidad O(1)
       const nonAulaSpaceIds = new Set(espacios.filter(e => e.tipo !== 'Aula').map(e => e.id));
       const docenteDisponibilidadMap = new Map();
