@@ -1037,33 +1037,50 @@ const Horarios = () => {
 
         // Reglas de Distribución Semanal y Módulos Dobles
         if (slot.needsDouble) {
-          // Materias de ciencias/talleres: Permitimos hasta 2 horas al día para formar bloques dobles
-          if (sameDayMatCount >= 2) {
-            softConf += slotIsTaller ? 5000 : 800; // Penalizamos masivamente si intenta meter una 3ra hora el mismo día
-          }
-          if (sameDayMatCount === 1 && !isConsecutiveSameDay) {
-            softConf += slotIsTaller ? 8000 : 400; // Para talleres es OBLIGATORIO que sean consecutivas
-          }
-          
-          // Conteo de parejas de horas consecutivas semanales (bloques dobles)
-          let doublePairs = 0;
-          Object.keys(materiaModsByDay).forEach(dKey => {
-            const mods = materiaModsByDay[dKey].sort((a, b) => a - b);
-            for (let idx = 0; idx < mods.length - 1; idx++) {
-              if (mods[idx+1] - mods[idx] === 1) {
-                doublePairs++;
+          if (slotIsTaller) {
+            // TALLERES: REGLAS DURAS Y ESTRICTAS
+            // 1. Debe estar en el mismo día y ser consecutivo a su par exacto
+            const myPairHourIndex = slotHourIndex % 2 === 0 ? slotHourIndex + 1 : slotHourIndex - 1;
+            const myPairId = slot.id.replace(`-${slotHourIndex}`, `-${myPairHourIndex}`);
+            
+            // Buscar dónde está mi par en currentState
+            const myPair = currentState.find(s => s.id === myPairId);
+            if (myPair) {
+              if (myPair.dia !== day) {
+                hardConf += 5; // Castigo duro: deben estar en el mismo día
+              } else {
+                const diff = Math.abs(myPair.moduloIndex - m);
+                if (diff !== 1) {
+                  hardConf += 5; // Castigo duro: deben ser consecutivos
+                } else {
+                  // No pueden cruzar el receso
+                  if (typeof modulosAntesDeReceso !== 'undefined') {
+                    const minM = Math.min(myPair.moduloIndex, m);
+                    if (minM === modulosAntesDeReceso - 1) {
+                      hardConf += 5; // Castigo duro: cruza el receso
+                    }
+                  }
+                }
               }
             }
-          });
-          
-          if (slotIsTaller) {
-            // Un taller debe ser puro bloque doble. Si tiene 8 horas, debe tener 4 parejas.
-            const expectedPairs = Math.floor((slot.horasSemanales || 8) / 2);
-            if (doublePairs < expectedPairs) {
-              softConf += 2000 * (expectedPairs - doublePairs); // Empuje masivo para forzar bloques dobles
+
+            // 2. Penalizar si hay más de 2 horas de taller el mismo día (un solo bloque)
+            if (sameDayMatCount >= 2) {
+              hardConf += 2;
             }
-          } else if (doublePairs === 0) {
-            softConf += 150; // Pequeño empuje para forzar que al menos forme un bloque doble
+          } else {
+            // CIENCIAS (NORMAL DOUBLE BLOCKS): Reglas suaves
+            if (sameDayMatCount >= 2) softConf += 800; 
+            if (sameDayMatCount === 1 && !isConsecutiveSameDay) softConf += 400; 
+            
+            let doublePairs = 0;
+            Object.keys(materiaModsByDay).forEach(dKey => {
+              const mods = materiaModsByDay[dKey].sort((a, b) => a - b);
+              for (let idx = 0; idx < mods.length - 1; idx++) {
+                if (mods[idx+1] - mods[idx] === 1) doublePairs++;
+              }
+            });
+            if (doublePairs === 0) softConf += 150; 
           }
         } else {
           // Español, Matemáticas y materias normales: DEBEN estar esparcidas (1 hora al día máximo)
