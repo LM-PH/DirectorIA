@@ -715,28 +715,97 @@ const Horarios = () => {
       };
 
       // 1. Descomponer asignaciones en slots individuales de 1 hora
+      //    PARA TALLERES: fusionar todas las asignaciones del mismo grado en UN solo bloque de 8 hrs
       let slotsToPlace = [];
+
+      // --- PASO 1A: Separar talleres de materias normales ---
+      const tallerAsigs = [];
+      const normalAsigs = [];
       asignaciones.forEach(asig => {
+        const mat = materias.find(m => m.id === asig.materiaId);
+        const espacioReq = mat?.espacioRequerido || 'Aula';
+        const nameLower = (asig.materiaNombre || '').toLowerCase();
+        const isTaller = (espacioReq === 'Taller') || nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
+        if (isTaller) {
+          tallerAsigs.push({ ...asig, _espacioReq: espacioReq });
+        } else {
+          normalAsigs.push(asig);
+        }
+      });
+
+      // --- PASO 1B: Agrupar talleres por materiaId + grado (primera parte del grupoIds key) ---
+      // Usamos materiaId como clave: todas las asignaciones del mismo taller van juntas
+      const tallerGroups = {};
+      tallerAsigs.forEach(asig => {
+        // La clave de agrupación es: materiaId + los grupoIds ordenados
+        const gKey = `${asig.materiaId}::${(asig.grupoIds || []).slice().sort().join(',')}`;
+        if (!tallerGroups[gKey]) {
+          tallerGroups[gKey] = { representative: asig, asigs: [] };
+        }
+        tallerGroups[gKey].asigs.push(asig);
+      });
+
+      // --- PASO 1C: Para cada grupo de taller, crear UN SOLO bloque de exactamente 8 slots ---
+      Object.values(tallerGroups).forEach(({ representative: rep, asigs: grpAsigs }) => {
+        const mat = materias.find(m => m.id === rep.materiaId);
+        const espacioReq = rep._espacioReq || mat?.espacioRequerido || 'Taller';
+        // Las horas del taller son las de la primera asignación (todas deben ser iguales por grado)
+        const hours = Number(rep.horasSemanales || 8);
+        const needsDouble = hours >= 2; // Siempre en módulos dobles
+        const gIds = rep.grupoIds || (rep.grupoId ? [rep.grupoId] : []);
+        const eIds = rep.espacioIds || (rep.espacioId ? [rep.espacioId] : []);
+
+        // Nombre del grupo(s)
+        let gName = rep.grupoNombre;
+        if (gIds.length > 1) {
+          const gradoNums = [...new Set(gIds.map(id => {
+            const g = grupos.find(gr => gr.id === id);
+            return g ? g.grado : null;
+          }).filter(Boolean))];
+          gName = gradoNums.map(gr => `${gr}°`).join('/') + ' (todos)';
+        }
+
+        for (let h = 0; h < hours; h++) {
+          slotsToPlace.push({
+            id: `taller-${rep.materiaId}-${(gIds).slice().sort().join('_')}-${h}`,
+            asigId: rep.id,
+            docenteId: '', // Sin docente — es TALLER
+            docenteNombre: '',
+            materiaId: rep.materiaId,
+            materiaNombre: rep.materiaNombre,
+            grupoId: gIds[0] || '',
+            grupoIds: gIds,
+            grupoNombre: gName,
+            espacioId: eIds[0] || '',
+            espacioIds: eIds,
+            espacioNombre: rep.espacioNombre,
+            horasSemanales: hours,
+            espacioRequerido: espacioReq,
+            needsDouble
+          });
+        }
+      });
+
+      // --- PASO 1D: Procesar materias normales (sin cambios) ---
+      normalAsigs.forEach(asig => {
         const hours = Number(asig.horasSemanales || 1);
         const mat = materias.find(m => m.id === asig.materiaId);
         const espacioReq = mat?.espacioRequerido || 'Aula';
         const needsDouble = checkNeedsDoubleModule(asig.materiaNombre, hours, espacioReq);
         
-        const nameLower = asig.materiaNombre.toLowerCase();
-        const isTaller = (espacioReq === 'Taller') || nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
-        const groupsToProcess = (!isTaller && asig.grupoIds && asig.grupoIds.length > 1) 
-          ? asig.grupoIds.map(gId => [gId]) 
+        const groupsToProcess = (asig.grupoIds && asig.grupoIds.length > 1)
+          ? asig.grupoIds.map(gId => [gId])
           : [asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])];
 
         const numGroupsForDivision = asig.grupoIds?.length || 1;
-        const hoursPerGroup = (numGroupsForDivision > 1 && !isTaller)
+        const hoursPerGroup = numGroupsForDivision > 1
           ? Math.max(1, Math.floor(hours / numGroupsForDivision))
           : hours;
 
         groupsToProcess.forEach((gIds, gIndex) => {
           const mainGroupId = gIds[0] || '';
           let gName = asig.grupoNombre;
-          if (!isTaller && asig.grupoIds?.length > 1) {
+          if (asig.grupoIds?.length > 1) {
             const gObj = grupos.find(g => g.id === mainGroupId);
             if (gObj) gName = `${gObj.grado}°${gObj.grupo}`;
           }
@@ -745,26 +814,21 @@ const Horarios = () => {
           let assignedSpaceIds = eIds;
           let assignedSpaceName = asig.espacioNombre;
           
-          if (!isTaller && asig.grupoIds?.length > 1 && eIds.length > 1) {
-            // Intentar emparejar el espacio con el grupo basándose en el nombre
+          if (asig.grupoIds?.length > 1 && eIds.length > 1) {
             const gObjForMatch = grupos.find(g => g.id === mainGroupId);
             let matchedSpaceId = null;
             if (gObjForMatch) {
-              const expectedSpaceName1 = `${gObjForMatch.grado} ${gObjForMatch.grupo}`.toLowerCase(); // "1 a"
-              const expectedSpaceName2 = `${gObjForMatch.grado}°${gObjForMatch.grupo}`.toLowerCase(); // "1°a"
+              const expectedSpaceName1 = `${gObjForMatch.grado} ${gObjForMatch.grupo}`.toLowerCase();
+              const expectedSpaceName2 = `${gObjForMatch.grado}°${gObjForMatch.grupo}`.toLowerCase();
               const matchedSpace = espacios.find(e => eIds.includes(e.id) && (
                 e.nombre.toLowerCase().includes(expectedSpaceName1) || 
                 e.nombre.toLowerCase().includes(expectedSpaceName2)
               ));
-              if (matchedSpace) {
-                matchedSpaceId = matchedSpace.id;
-              }
+              if (matchedSpace) matchedSpaceId = matchedSpace.id;
             }
-            // Si no hay coincidencia exacta por nombre y las longitudes coinciden, usar el índice (fallback)
             if (!matchedSpaceId && eIds.length === asig.grupoIds.length) {
               matchedSpaceId = eIds[gIndex];
             }
-            // Si encontramos un ID, asignar ese espacio únicamente
             if (matchedSpaceId) {
               assignedSpaceIds = [matchedSpaceId];
               const sObj = espacios.find(e => e.id === matchedSpaceId);
