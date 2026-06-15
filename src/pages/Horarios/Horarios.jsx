@@ -1167,7 +1167,7 @@ const Horarios = () => {
 
       // 3. Bucle de reparación iterativa (Min-Conflicts)
       let maxIterations = 8000;
-      let iteration = 0;
+      iteration = 0;
 
       while (iteration < maxIterations) {
         // Encontrar slots con conflictos
