@@ -733,44 +733,47 @@ const Horarios = () => {
         }
       });
 
-      // --- PASO 1B: Agrupar talleres por materiaId + grado (primera parte del grupoIds key) ---
-      // Usamos materiaId como clave: todas las asignaciones del mismo taller van juntas
+      // --- PASO 1B: Agrupar talleres SOLO por materiaId ---
+      // No importa cuántos maestros haya ni a qué grupos estén asignados individualmente.
+      // Todos los maestros del mismo Taller se fusionan en UN SOLO representante.
       const tallerGroups = {};
       tallerAsigs.forEach(asig => {
-        // La clave de agrupación es: materiaId + los grupoIds ordenados
-        const gKey = `${asig.materiaId}::${(asig.grupoIds || []).slice().sort().join(',')}`;
+        const gKey = asig.materiaId; // Clave: solo el ID de la materia
         if (!tallerGroups[gKey]) {
-          tallerGroups[gKey] = { representative: asig, asigs: [] };
+          tallerGroups[gKey] = { representative: asig, allGrupoIds: new Set(), asigs: [] };
         }
         tallerGroups[gKey].asigs.push(asig);
+        // Recolectar TODOS los grupos de TODOS los maestros del taller
+        (asig.grupoIds || (asig.grupoId ? [asig.grupoId] : [])).forEach(id => {
+          tallerGroups[gKey].allGrupoIds.add(id);
+        });
       });
 
-      // --- PASO 1C: Para cada grupo de taller, crear UN SOLO bloque de exactamente 8 slots ---
-      Object.values(tallerGroups).forEach(({ representative: rep, asigs: grpAsigs }) => {
+      // --- PASO 1C: Para cada Taller, crear UN SOLO bloque de exactamente las horas de la materia ---
+      Object.values(tallerGroups).forEach(({ representative: rep, allGrupoIds }) => {
         const mat = materias.find(m => m.id === rep.materiaId);
         const espacioReq = rep._espacioReq || mat?.espacioRequerido || 'Taller';
-        // Las horas del taller son las de la primera asignación (todas deben ser iguales por grado)
-        const hours = Number(rep.horasSemanales || 8);
-        const needsDouble = hours >= 2; // Siempre en módulos dobles
-        const gIds = rep.grupoIds || (rep.grupoId ? [rep.grupoId] : []);
+        // Tomar las horas de la materia del catálogo; si no existe, usar las de la asignación
+        const hours = Number(mat?.horasSemanales || rep.horasSemanales || 8);
+        const needsDouble = true; // Siempre en módulos dobles
+        const gIds = Array.from(allGrupoIds);
         const eIds = rep.espacioIds || (rep.espacioId ? [rep.espacioId] : []);
 
-        // Nombre del grupo(s)
-        let gName = rep.grupoNombre;
-        if (gIds.length > 1) {
-          const gradoNums = [...new Set(gIds.map(id => {
-            const g = grupos.find(gr => gr.id === id);
-            return g ? g.grado : null;
-          }).filter(Boolean))];
-          gName = gradoNums.map(gr => `${gr}°`).join('/') + ' (todos)';
-        }
+        // Determinar el grado de este taller para el nombre del grupo
+        const gradoNums = [...new Set(gIds.map(id => {
+          const g = grupos.find(gr => gr.id === id);
+          return g ? g.grado : null;
+        }).filter(Boolean))];
+        const gName = gradoNums.length > 0
+          ? gradoNums.map(gr => `${gr}°`).join('/') + ' (todos)'
+          : rep.grupoNombre;
 
         for (let h = 0; h < hours; h++) {
           slotsToPlace.push({
-            id: `taller-${rep.materiaId}-${(gIds).slice().sort().join('_')}-${h}`,
+            id: `taller-${rep.materiaId}-${h}`,
             asigId: rep.id,
-            docenteId: '', // Sin docente — es TALLER
-            docenteNombre: '',
+            docenteId: '',       // Sin docente — es TALLER
+            docenteNombre: '',   // Sin nombre de maestro
             materiaId: rep.materiaId,
             materiaNombre: rep.materiaNombre,
             grupoId: gIds[0] || '',
