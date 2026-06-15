@@ -2923,7 +2923,7 @@ const Horarios = () => {
                                                 }}
                                               >
                                                 <div className="class-card-subject" title={slot.materiaNombre}>{slot.materiaNombre}</div>
-                                                {viewFilterMode !== 'docente' && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
+                                                {viewFilterMode !== 'docente' && !slot.materiaNombre.toLowerCase().includes('taller') && !slot.materiaNombre.toLowerCase().includes('tecnolog') && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
                                                 {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>{slot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {slot.grupoNombre}</div>}
                                                 
                                                 <div className="class-card-meta">
