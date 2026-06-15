@@ -1039,10 +1039,10 @@ const Horarios = () => {
         if (slot.needsDouble) {
           // Materias de ciencias/talleres: Permitimos hasta 2 horas al día para formar bloques dobles
           if (sameDayMatCount >= 2) {
-            softConf += 800; // Penalizamos si intenta meter una 3ra hora el mismo día
+            softConf += slotIsTaller ? 5000 : 800; // Penalizamos masivamente si intenta meter una 3ra hora el mismo día
           }
           if (sameDayMatCount === 1 && !isConsecutiveSameDay) {
-            softConf += 400; // Si hay 2 horas el mismo día, DEBEN ser consecutivas
+            softConf += slotIsTaller ? 8000 : 400; // Para talleres es OBLIGATORIO que sean consecutivas
           }
           
           // Conteo de parejas de horas consecutivas semanales (bloques dobles)
@@ -1055,7 +1055,14 @@ const Horarios = () => {
               }
             }
           });
-          if (doublePairs === 0) {
+          
+          if (slotIsTaller) {
+            // Un taller debe ser puro bloque doble. Si tiene 8 horas, debe tener 4 parejas.
+            const expectedPairs = Math.floor((slot.horasSemanales || 8) / 2);
+            if (doublePairs < expectedPairs) {
+              softConf += 2000 * (expectedPairs - doublePairs); // Empuje masivo para forzar bloques dobles
+            }
+          } else if (doublePairs === 0) {
             softConf += 150; // Pequeño empuje para forzar que al menos forme un bloque doble
           }
         } else {
@@ -2983,9 +2990,13 @@ const Horarios = () => {
                                                 {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>{slot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {slot.grupoNombre}</div>}
                                                 
                                                 <div className="class-card-meta">
-                                                  <span className="class-card-space" title={slot.espacioNombre || 'Aula'}>
-                                                    📍 {slot.espacioNombre || 'Aula'}
-                                                  </span>
+                                                  {!(slot.materiaNombre || '').toLowerCase().includes('taller') && 
+                                                   !(slot.materiaNombre || '').toLowerCase().includes('tecnolog') && 
+                                                   slot.espacioRequerido !== 'Taller' && (
+                                                    <span className="class-card-space" title={slot.espacioNombre || 'Aula'}>
+                                                      📍 {slot.espacioNombre || 'Aula'}
+                                                    </span>
+                                                  )}
                                                 </div>
                                               </div>
                                             );
