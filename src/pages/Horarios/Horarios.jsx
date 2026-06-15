@@ -2732,7 +2732,9 @@ const Horarios = () => {
                             </div>
                             <div className="p-card-body">
                               <span className="p-card-meta">{s.grupoNombre || 'Taller'}</span>
-                              <span className="p-card-teacher" title={s.docenteNombre}>{s.docenteNombre}</span>
+                              {!(s.materiaNombre || '').toLowerCase().includes('taller') && 
+                               !(s.materiaNombre || '').toLowerCase().includes('tecnolog') && 
+                               <span className="p-card-teacher" title={s.docenteNombre}>{s.docenteNombre}</span>}
                             </div>
                           </div>
                         );
@@ -2962,7 +2964,12 @@ const Horarios = () => {
                                                 }}
                                               >
                                                 <div className="class-card-subject" title={slot.materiaNombre}>{slot.materiaNombre}</div>
-                                                {viewFilterMode !== 'docente' && slot.espacioRequerido !== 'Taller' && !slot.materiaNombre.toLowerCase().includes('taller') && !slot.materiaNombre.toLowerCase().includes('tecnolog') && <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
+                                                {viewFilterMode !== 'docente' && 
+                                                 slot.espacioRequerido !== 'Taller' && 
+                                                 !(slot.materiaNombre || '').toLowerCase().includes('taller') && 
+                                                 !(slot.materiaNombre || '').toLowerCase().includes('tecnolog') && 
+                                                 slot.docenteNombre !== '' && 
+                                                 <div className="class-card-teacher" title={slot.docenteNombre}>{slot.docenteNombre}</div>}
                                                 {viewFilterMode !== 'grupo' && <div className="class-card-teacher" style={{ fontWeight: '600' }}>{slot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {slot.grupoNombre}</div>}
                                                 
                                                 <div className="class-card-meta">
