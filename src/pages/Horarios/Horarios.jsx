@@ -725,7 +725,17 @@ const Horarios = () => {
         const mat = materias.find(m => m.id === asig.materiaId);
         const espacioReq = mat?.espacioRequerido || 'Aula';
         const nameLower = (asig.materiaNombre || '').toLowerCase();
-        const isTaller = (espacioReq === 'Taller') || nameLower.includes('taller') || nameLower.includes('tecnologia') || nameLower.includes('tecnología');
+        
+        // Reconocimiento ultraviolento y agresivo de talleres
+        const tallerKeywords = [
+          'taller', 'tecnolog', 'ofimatica', 'ofimática', 'carpinteria', 'carpintería', 
+          'soldadura', 'electricidad', 'electronica', 'electrónica', 'diseño', 'diseno',
+          'dibujo', 'danza', 'preparacion de alimentos', 'preparación de alimentos',
+          'agropecuaria', 'agricultura', 'ganaderia', 'ganadería', 'mecanica', 'mecánica'
+        ];
+        const isTallerByName = tallerKeywords.some(kw => nameLower.includes(kw));
+        const isTaller = (espacioReq === 'Taller') || isTallerByName;
+        
         if (isTaller) {
           tallerAsigs.push({ ...asig, _espacioReq: espacioReq });
         } else {
