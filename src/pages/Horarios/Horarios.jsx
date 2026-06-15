@@ -876,6 +876,7 @@ const Horarios = () => {
           const s = currentState[i];
           const sNameLower = s.materiaNombre.toLowerCase();
           const sIsTaller = (s.espacioRequerido === 'Taller') || sNameLower.includes('taller') || sNameLower.includes('tecnolog');
+          const sTKey = sIsTaller ? (s.grupoIds || []).slice().sort().join(',') : null;
 
           // 1. Cruce Docente
           if (s.dia === day && s.moduloIndex === m && isSameTeacher(s, slot)) {
@@ -892,7 +893,6 @@ const Horarios = () => {
           // Alineación estricta de Talleres: si movemos un taller, penalizamos masivamente si no coincide
           // con el horario original asignado al bloque.
           if (slotIsTaller && sIsTaller) {
-            const sTKey = (s.grupoIds || []).slice().sort().join(',');
             if (sTKey === slotTKey) {
               const sHourIndex = parseInt(s.id.split('-').pop());
               if (sHourIndex === slotHourIndex) {
@@ -911,7 +911,10 @@ const Horarios = () => {
 
           // 3. Cruce Espacio
           if (s.dia === day && s.moduloIndex === m && shareSpace(s, slot, nonAulaSpaceIds)) {
-            spaceClashCount++;
+            // Ignorar choque si ambos son talleres del mismo grado (pueden compartir el espacio Taller)
+            if (!(slotIsTaller && sIsTaller && slotTKey === sTKey)) {
+              spaceClashCount++;
+            }
           }
 
           // 4. Materia del mismo grupo en el mismo día
@@ -3039,7 +3042,7 @@ const Horarios = () => {
                                               title={`${cellSlot.materiaNombre}\nDocente: ${cellSlot.docenteNombre}\nGrupo: ${cellSlot.grupoNombre}\nEspacio: ${cellSlot.espacioNombre || 'Aula'}`}
                                             >
                                               <div className="gt-subject">{cellSlot.materiaNombre}</div>
-                                              {timelineGlobalResource !== 'docente' && <div className="gt-docent">{cellSlot.docenteNombre}</div>}
+                                              {timelineGlobalResource !== 'docente' && cellSlot.espacioRequerido !== 'Taller' && !cellSlot.materiaNombre.toLowerCase().includes('taller') && !cellSlot.materiaNombre.toLowerCase().includes('tecnolog') && <div className="gt-docent">{cellSlot.docenteNombre}</div>}
                                               {timelineGlobalResource !== 'grupo' && <div className="gt-docent" style={{ fontWeight: 'bold' }}>{cellSlot.grupoNombre?.includes(',') ? 'Grupos:' : 'Grupo:'} {cellSlot.grupoNombre}</div>}
                                             </div>
                                           );
@@ -3177,7 +3180,10 @@ const Horarios = () => {
                                         }
                                       } else if (printOption === 'grupo' && selectedGroupId) {
                                         const s = generatedSchedule.slots.find(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
-                                        if (s) cellText = `${s.materiaNombre}\n(${s.docenteNombre})\n📍 ${s.espacioNombre || 'Aula'}`;
+                                      if (s) {
+                                        const isTll = s.espacioRequerido === 'Taller' || s.materiaNombre.toLowerCase().includes('taller') || s.materiaNombre.toLowerCase().includes('tecnolog');
+                                        cellText = isTll ? `${s.materiaNombre}\n📍 ${s.espacioNombre || 'Aula'}` : `${s.materiaNombre}\n(${s.docenteNombre})\n📍 ${s.espacioNombre || 'Aula'}`;
+                                      }
                                       } else if (printOption === 'docente' && selectedDocenteId) {
                                         const s = generatedSchedule.slots.find(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
                                         if (s) cellText = `${s.materiaNombre}\nGrupo: ${s.grupoNombre}\n📍 ${s.espacioNombre || 'Aula'}`;
@@ -3245,7 +3251,10 @@ const Horarios = () => {
                                       }
                                     } else if (printOption === 'grupo' && selectedGroupId) {
                                       const s = generatedSchedule.slots.find(s => (s.grupoId === selectedGroupId || (s.grupoIds && s.grupoIds.includes(selectedGroupId))) && s.dia === day && s.moduloIndex === modIdx);
-                                      if (s) cellText = `${s.materiaNombre}\n(${s.docenteNombre})\n📍 ${s.espacioNombre || 'Aula'}`;
+                                      if (s) {
+                                        const isTll = s.espacioRequerido === 'Taller' || s.materiaNombre.toLowerCase().includes('taller') || s.materiaNombre.toLowerCase().includes('tecnolog');
+                                        cellText = isTll ? `${s.materiaNombre}\n📍 ${s.espacioNombre || 'Aula'}` : `${s.materiaNombre}\n(${s.docenteNombre})\n📍 ${s.espacioNombre || 'Aula'}`;
+                                      }
                                     } else if (printOption === 'docente' && selectedDocenteId) {
                                       const s = generatedSchedule.slots.find(s => s.docenteId === selectedDocenteId && s.dia === day && s.moduloIndex === modIdx);
                                       if (s) cellText = `${s.materiaNombre}\nGrupo: ${s.grupoNombre}\n📍 ${s.espacioNombre || 'Aula'}`;
