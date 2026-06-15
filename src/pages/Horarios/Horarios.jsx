@@ -2657,7 +2657,7 @@ const Horarios = () => {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', width: '100%' }}>
                         <Sparkles size={18} className="sparkle-icon" />
-                        <span>{saving ? 'Generando...' : 'GENERAR CON INTELIGENCIA ARTIFICIAL (V2)'}</span>
+                        <span>{saving ? 'Generando...' : 'GENERAR (V3 - FIX TALLERES)'}</span>
                       </div>
                       {saving && generationProgress.stage && (
                         <div style={{ fontSize: '11px', opacity: 0.9, fontWeight: 'normal', width: '100%', textAlign: 'center', marginTop: '2px' }}>
