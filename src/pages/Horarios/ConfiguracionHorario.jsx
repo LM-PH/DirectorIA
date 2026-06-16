@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getConfig, saveConfig } from '../../services/horariosData';
-import { Save, Clock, CalendarDays, Settings2 } from 'lucide-react';
+import { Save, Clock, CalendarDays, Settings2, School, Sun, Moon } from 'lucide-react';
 
 const ConfiguracionHorario = () => {
   const [config, setConfig] = useState(null);
@@ -72,7 +72,12 @@ const ConfiguracionHorario = () => {
     }
   };
 
-  if (loading || !config) return <div className="p-8 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-indigo-500 rounded-full border-t-transparent"></div></div>;
+  if (loading || !config) return (
+    <div className="flex flex-col items-center justify-center h-64 space-y-4">
+      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      <p className="text-indigo-600 font-medium">Cargando configuración...</p>
+    </div>
+  );
 
   const diasSemana = [
     { id: 1, nombre: 'Lunes' },
@@ -85,119 +90,144 @@ const ConfiguracionHorario = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-sm border border-slate-200 mt-6">
-      <div className="flex items-center gap-3 mb-8 border-b pb-4">
-        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
-          <Settings2 size={24} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Configuración Escolar</h1>
-          <p className="text-slate-500">Parámetros base para la generación de horarios</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-8">
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-3xl shadow-xl shadow-indigo-100/50 border border-slate-100 overflow-hidden">
         
-        {/* Datos Generales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Nombre de la Escuela</label>
-            <input type="text" name="escuela" value={config.escuela || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" required />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Turno</label>
-            <select name="turno" value={config.turno || 'Matutino'} onChange={handleChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
-              <option value="Matutino">Matutino</option>
-              <option value="Vespertino">Vespertino</option>
-              <option value="Tiempo Completo">Tiempo Completo</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Ciclo Escolar</label>
-            <input type="text" name="cicloEscolar" value={config.cicloEscolar || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="Ej. 2024-2025" required />
+        {/* Banner Superior */}
+        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 p-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+              <Settings2 size={32} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tight">Parámetros de la Escuela</h1>
+              <p className="text-indigo-100 mt-1">Configura las reglas base antes de generar los horarios.</p>
+            </div>
           </div>
         </div>
 
-        {/* Estructura del Día */}
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
-          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <Clock size={20} className="text-indigo-500" /> 
-            Estructura del Día
-          </h3>
+        <form onSubmit={handleSave} className="p-8 space-y-10">
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Hora de Entrada</label>
-              <input type="time" name="horaEntrada" value={config.horaEntrada || ''} onChange={handleChange} className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Hora de Salida</label>
-              <input type="time" name="horaSalida" value={config.horaSalida || ''} onChange={handleChange} className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Módulos por Día</label>
-              <input type="number" name="modulosPorDia" value={config.modulosPorDia || 7} onChange={handleChange} min="1" max="15" className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Duración Módulo (min)</label>
-              <input type="number" name="duracionModulo" value={config.duracionModulo || 50} onChange={handleChange} min="10" max="120" className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none" required />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-200">
-            <h4 className="text-sm font-semibold text-slate-700 mb-4">Configuración de Receso</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-600">El receso ocurre después del módulo:</label>
-                <input type="number" name="despuesDeModulo" value={config.receso?.despuesDeModulo || 3} onChange={handleRecesoChange} min="1" max={config.modulosPorDia - 1} className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none" required />
+          {/* Datos Generales */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+              <School size={22} className="text-indigo-500" /> Datos Generales
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2 col-span-2 md:col-span-1">
+                <label className="text-sm font-semibold text-slate-700">Nombre de la Escuela</label>
+                <input type="text" name="escuela" value={config.escuela || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none shadow-inner" required />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-600">Duración del Receso (min):</label>
-                <input type="number" name="duracion" value={config.receso?.duracion || 20} onChange={handleRecesoChange} min="5" max="120" className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none" required />
+                <label className="text-sm font-semibold text-slate-700">Turno</label>
+                <div className="relative">
+                  <select name="turno" value={config.turno || 'Matutino'} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none shadow-inner appearance-none">
+                    <option value="Matutino">Matutino</option>
+                    <option value="Vespertino">Vespertino</option>
+                    <option value="Tiempo Completo">Tiempo Completo</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                    {config.turno === 'Matutino' ? <Sun size={18} className="text-amber-500"/> : <Moon size={18} className="text-indigo-400"/>}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Ciclo Escolar</label>
+                <input type="text" name="cicloEscolar" value={config.cicloEscolar || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none shadow-inner" placeholder="Ej. 2024-2025" required />
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Días Laborables */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <CalendarDays size={20} className="text-indigo-500" />
-            Días Laborables
-          </h3>
-          <div className="flex flex-wrap gap-3">
-            {diasSemana.map(dia => {
-              const isSelected = config.diasLaborables?.includes(dia.id);
-              return (
-                <button
-                  key={dia.id}
-                  type="button"
-                  onClick={() => toggleDiaLaborable(dia.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    isSelected 
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {dia.nombre}
-                </button>
-              );
-            })}
+          {/* Estructura del Día */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+              <Clock size={22} className="text-indigo-500" /> Estructura del Día
+            </h3>
+            
+            <div className="bg-gradient-to-b from-slate-50 to-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-600">Entrada</label>
+                  <input type="time" name="horaEntrada" value={config.horaEntrada || ''} onChange={handleChange} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-mono text-center" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-600">Salida</label>
+                  <input type="time" name="horaSalida" value={config.horaSalida || ''} onChange={handleChange} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-mono text-center" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-600">Módulos/Día</label>
+                  <input type="number" name="modulosPorDia" value={config.modulosPorDia || 7} onChange={handleChange} min="1" max="15" className="w-full p-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-mono text-center" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-600">Minutos x Módulo</label>
+                  <input type="number" name="duracionModulo" value={config.duracionModulo || 50} onChange={handleChange} min="10" max="120" className="w-full p-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-mono text-center" required />
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200/60">
+                <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Regla del Receso Escolar</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Ocurre después del Módulo:</label>
+                    <div className="flex items-center gap-3">
+                      <span className="text-amber-600 font-bold">Módulo</span>
+                      <input type="number" name="despuesDeModulo" value={config.receso?.despuesDeModulo || 3} onChange={handleRecesoChange} min="1" max={config.modulosPorDia - 1} className="w-24 p-3 border border-amber-200 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 transition-all outline-none font-mono text-center bg-white" required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Duración del Receso:</label>
+                    <div className="flex items-center gap-3">
+                      <input type="number" name="duracion" value={config.receso?.duracion || 20} onChange={handleRecesoChange} min="5" max="120" className="w-24 p-3 border border-amber-200 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 transition-all outline-none font-mono text-center bg-white" required />
+                      <span className="text-slate-500 font-medium">minutos</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="pt-6 border-t flex justify-end">
-          <button 
-            type="submit" 
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50"
-          >
-            <Save size={18} />
-            {saving ? 'Guardando...' : 'Guardar Configuración'}
-          </button>
-        </div>
+          {/* Días Laborables */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 border-b pb-2">
+              <CalendarDays size={22} className="text-indigo-500" /> Días Laborables
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {diasSemana.map(dia => {
+                const isSelected = config.diasLaborables?.includes(dia.id);
+                return (
+                  <button
+                    key={dia.id}
+                    type="button"
+                    onClick={() => toggleDiaLaborable(dia.id)}
+                    className={`px-6 py-3 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-105 ${
+                      isSelected 
+                      ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 border-transparent' 
+                      : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                    }`}
+                  >
+                    {dia.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      </form>
+          {/* Acción Guardar */}
+          <div className="pt-8 border-t flex justify-end">
+            <button 
+              type="submit" 
+              disabled={saving}
+              className="group relative flex items-center gap-3 px-8 py-4 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl transition-all shadow-xl shadow-slate-300 overflow-hidden disabled:opacity-70"
+            >
+              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <Save size={20} className="relative z-10" />
+              <span className="relative z-10">{saving ? 'Guardando...' : 'Confirmar Configuración'}</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   );
 };
