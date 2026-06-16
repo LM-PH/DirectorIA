@@ -372,7 +372,7 @@ const AsignacionesTab = ({ schoolId }) => {
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!form.docenteId || !form.materiaId || !form.grupoId) return;
+    if (!form.docenteId || !form.materiaId) return;
     await createAsignacion(schoolId, form);
     setForm({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3 });
     load();
@@ -414,9 +414,9 @@ const AsignacionesTab = ({ schoolId }) => {
           </select>
         </div>
         <div className="form-group" style={{ flex: 1, minWidth: '120px', marginBottom: 0 }}>
-          <label>Grupo *</label>
-          <select value={form.grupoId} onChange={e=>setForm({...form, grupoId: e.target.value})} required>
-            <option value="">Selecciona...</option>
+          <label>Grupo</label>
+          <select value={form.grupoId} onChange={e=>setForm({...form, grupoId: e.target.value})}>
+            <option value="">(Taller / Multigrupo)</option>
             {grupos.map(g => <option key={g.id} value={g.id}>{g.grado}° {g.grupo}</option>)}
           </select>
         </div>
@@ -452,7 +452,7 @@ const AsignacionesTab = ({ schoolId }) => {
             <tr key={item.id}>
               <td style={{ fontWeight: 500 }}>{getName(docentes, item.docenteId)}</td>
               <td>{getName(materias, item.materiaId)}</td>
-              <td><span className="badge badge-info">{getName(grupos, item.grupoId)}</span></td>
+              <td><span className={`badge ${item.grupoId ? 'badge-info' : 'badge-warning'}`}>{item.grupoId ? getName(grupos, item.grupoId) : 'Multigrupo (Taller)'}</span></td>
               <td>{item.espacioId ? getName(espacios, item.espacioId) : <span style={{color:'#94a3b8'}}>-</span>}</td>
               <td>{item.horas} HRS</td>
               <td style={{ textAlign: 'center' }}>
