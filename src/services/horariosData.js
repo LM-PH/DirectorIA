@@ -12,9 +12,14 @@ const COLLECTIONS = {
 
 // --- Helper Functions Genéricas ---
 const getAll = async (collectionName) => {
-  const q = query(collection(db, collectionName));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  try {
+    const q = query(collection(db, collectionName));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (e) {
+    console.error(`Error leyendo la colección ${collectionName}:`, e);
+    return [];
+  }
 };
 
 
@@ -38,11 +43,6 @@ const remove = async (collectionName, id) => {
 
 // --- Configuración ---
 export const getConfig = async () => {
-  // Asumimos un solo doc de configuración principal
-  const configs = await getAll(COLLECTIONS.CONFIG);
-  if (configs.length > 0) return configs[0];
-  
-  // Default config
   const defaultConf = {
     escuela: "Mi Escuela",
     turno: "Matutino",
@@ -52,13 +52,27 @@ export const getConfig = async () => {
     modulosPorDia: 7,
     duracionModulo: 50,
     receso: {
-      despuesDeModulo: 3, // el receso va después del módulo 3
+      despuesDeModulo: 3,
       duracion: 20
     },
-    diasLaborables: [1, 2, 3, 4, 5] // Lunes a Viernes
+    diasLaborables: [1, 2, 3, 4, 5]
   };
-  const newConf = await create(COLLECTIONS.CONFIG, defaultConf);
-  return newConf;
+
+  try {
+    const configs = await getAll(COLLECTIONS.CONFIG);
+    if (configs.length > 0) return configs[0];
+  } catch (e) {
+    console.warn("No se pudo leer la configuración (posible falta de permisos o sin conexión):", e);
+    return { id: 'temp-id', ...defaultConf };
+  }
+  
+  try {
+    const newConf = await create(COLLECTIONS.CONFIG, defaultConf);
+    return newConf;
+  } catch (e) {
+    console.warn("No se pudo crear la config por defecto en DB:", e);
+    return { id: 'temp-id', ...defaultConf };
+  }
 };
 
 export const saveConfig = async (id, data) => {
