@@ -11,9 +11,20 @@ const COLLECTIONS = {
 };
 
 // --- Helper Functions Genéricas ---
-const getAll = async (collectionName) => {
+const getSchoolCollection = (schoolId, collectionName) => {
+  if (!schoolId) throw new Error("schoolId requerido");
+  return collection(db, 'schools', schoolId, collectionName);
+};
+
+const getSchoolDoc = (schoolId, collectionName, id) => {
+  if (!schoolId) throw new Error("schoolId requerido");
+  return doc(db, 'schools', schoolId, collectionName, id);
+};
+
+const getAll = async (schoolId, collectionName) => {
+  if (!schoolId) return [];
   try {
-    const q = query(collection(db, collectionName));
+    const q = query(getSchoolCollection(schoolId, collectionName));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (e) {
@@ -22,27 +33,25 @@ const getAll = async (collectionName) => {
   }
 };
 
-
-
-const create = async (collectionName, data) => {
-  const docRef = await addDoc(collection(db, collectionName), data);
+const create = async (schoolId, collectionName, data) => {
+  const docRef = await addDoc(getSchoolCollection(schoolId, collectionName), data);
   return { id: docRef.id, ...data };
 };
 
-const update = async (collectionName, id, data) => {
-  const docRef = doc(db, collectionName, id);
+const update = async (schoolId, collectionName, id, data) => {
+  const docRef = getSchoolDoc(schoolId, collectionName, id);
   await updateDoc(docRef, data);
   return { id, ...data };
 };
 
-const remove = async (collectionName, id) => {
-  const docRef = doc(db, collectionName, id);
+const remove = async (schoolId, collectionName, id) => {
+  const docRef = getSchoolDoc(schoolId, collectionName, id);
   await deleteDoc(docRef);
   return id;
 };
 
 // --- Configuración ---
-export const getConfig = async () => {
+export const getConfig = async (schoolId) => {
   const defaultConf = {
     escuela: "Mi Escuela",
     turno: "Matutino",
@@ -58,16 +67,18 @@ export const getConfig = async () => {
     diasLaborables: [1, 2, 3, 4, 5]
   };
 
+  if (!schoolId) return { id: 'temp-id', ...defaultConf };
+
   try {
-    const configs = await getAll(COLLECTIONS.CONFIG);
+    const configs = await getAll(schoolId, COLLECTIONS.CONFIG);
     if (configs.length > 0) return configs[0];
   } catch (e) {
-    console.warn("No se pudo leer la configuración (posible falta de permisos o sin conexión):", e);
+    console.warn("No se pudo leer la configuración:", e);
     return { id: 'temp-id', ...defaultConf };
   }
   
   try {
-    const newConf = await create(COLLECTIONS.CONFIG, defaultConf);
+    const newConf = await create(schoolId, COLLECTIONS.CONFIG, defaultConf);
     return newConf;
   } catch (e) {
     console.warn("No se pudo crear la config por defecto en DB:", e);
@@ -75,38 +86,38 @@ export const getConfig = async () => {
   }
 };
 
-export const saveConfig = async (id, data) => {
-  if (id) {
-    return await update(COLLECTIONS.CONFIG, id, data);
+export const saveConfig = async (schoolId, id, data) => {
+  if (id && id !== 'temp-id') {
+    return await update(schoolId, COLLECTIONS.CONFIG, id, data);
   }
-  return await create(COLLECTIONS.CONFIG, data);
+  return await create(schoolId, COLLECTIONS.CONFIG, data);
 };
 
 // --- Docentes ---
-export const getDocentes = () => getAll(COLLECTIONS.DOCENTES);
-export const createDocente = (data) => create(COLLECTIONS.DOCENTES, data);
-export const updateDocente = (id, data) => update(COLLECTIONS.DOCENTES, id, data);
-export const deleteDocente = (id) => remove(COLLECTIONS.DOCENTES, id);
+export const getDocentes = (schoolId) => getAll(schoolId, COLLECTIONS.DOCENTES);
+export const createDocente = (schoolId, data) => create(schoolId, COLLECTIONS.DOCENTES, data);
+export const updateDocente = (schoolId, id, data) => update(schoolId, COLLECTIONS.DOCENTES, id, data);
+export const deleteDocente = (schoolId, id) => remove(schoolId, COLLECTIONS.DOCENTES, id);
 
 // --- Grupos ---
-export const getGrupos = () => getAll(COLLECTIONS.GRUPOS);
-export const createGrupo = (data) => create(COLLECTIONS.GRUPOS, data);
-export const updateGrupo = (id, data) => update(COLLECTIONS.GRUPOS, id, data);
-export const deleteGrupo = (id) => remove(COLLECTIONS.GRUPOS, id);
+export const getGrupos = (schoolId) => getAll(schoolId, COLLECTIONS.GRUPOS);
+export const createGrupo = (schoolId, data) => create(schoolId, COLLECTIONS.GRUPOS, data);
+export const updateGrupo = (schoolId, id, data) => update(schoolId, COLLECTIONS.GRUPOS, id, data);
+export const deleteGrupo = (schoolId, id) => remove(schoolId, COLLECTIONS.GRUPOS, id);
 
 // --- Materias ---
-export const getMaterias = () => getAll(COLLECTIONS.MATERIAS);
-export const createMateria = (data) => create(COLLECTIONS.MATERIAS, data);
-export const updateMateria = (id, data) => update(COLLECTIONS.MATERIAS, id, data);
-export const deleteMateria = (id) => remove(COLLECTIONS.MATERIAS, id);
+export const getMaterias = (schoolId) => getAll(schoolId, COLLECTIONS.MATERIAS);
+export const createMateria = (schoolId, data) => create(schoolId, COLLECTIONS.MATERIAS, data);
+export const updateMateria = (schoolId, id, data) => update(schoolId, COLLECTIONS.MATERIAS, id, data);
+export const deleteMateria = (schoolId, id) => remove(schoolId, COLLECTIONS.MATERIAS, id);
 
 // --- Espacios ---
-export const getEspacios = () => getAll(COLLECTIONS.ESPACIOS);
-export const createEspacio = (data) => create(COLLECTIONS.ESPACIOS, data);
-export const updateEspacio = (id, data) => update(COLLECTIONS.ESPACIOS, id, data);
-export const deleteEspacio = (id) => remove(COLLECTIONS.ESPACIOS, id);
+export const getEspacios = (schoolId) => getAll(schoolId, COLLECTIONS.ESPACIOS);
+export const createEspacio = (schoolId, data) => create(schoolId, COLLECTIONS.ESPACIOS, data);
+export const updateEspacio = (schoolId, id, data) => update(schoolId, COLLECTIONS.ESPACIOS, id, data);
+export const deleteEspacio = (schoolId, id) => remove(schoolId, COLLECTIONS.ESPACIOS, id);
 
 // --- Horarios Generados ---
-export const getHorariosGenerados = () => getAll(COLLECTIONS.GENERADOS);
-export const saveHorarioGenerado = (data) => create(COLLECTIONS.GENERADOS, data);
-export const deleteHorarioGenerado = (id) => remove(COLLECTIONS.GENERADOS, id);
+export const getHorariosGenerados = (schoolId) => getAll(schoolId, COLLECTIONS.GENERADOS);
+export const saveHorarioGenerado = (schoolId, data) => create(schoolId, COLLECTIONS.GENERADOS, data);
+export const deleteHorarioGenerado = (schoolId, id) => remove(schoolId, COLLECTIONS.GENERADOS, id);

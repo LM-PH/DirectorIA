@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Play, AlertTriangle, CheckCircle, Save, Cpu, Zap, BarChart2, ShieldCheck, ServerCrash } from 'lucide-react';
 import { getConfig, getDocentes, getGrupos, getMaterias, getEspacios, saveHorarioGenerado } from '../../services/horariosData';
+import { useAuth } from '../../contexts/AuthContext';
 import { ScheduleGenerator } from '../../services/ScheduleGenerator';
 import { ScheduleValidator } from '../../services/ScheduleValidator';
 import './Horarios.css';
 
 const GeneradorPanel = () => {
+  const { schoolId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [progreso, setProgreso] = useState(0);
   const [resultado, setResultado] = useState(null);
@@ -19,16 +21,16 @@ const GeneradorPanel = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const conf = await getConfig();
+      const conf = await getConfig(schoolId);
       setConfig(conf);
-      setDocentes(await getDocentes());
-      setGrupos(await getGrupos());
-      setMaterias(await getMaterias());
-      setEspacios(await getEspacios());
+      setDocentes(await getDocentes(schoolId));
+      setGrupos(await getGrupos(schoolId));
+      setMaterias(await getMaterias(schoolId));
+      setEspacios(await getEspacios(schoolId));
       setDataReady(true);
     };
     fetchData();
-  }, []);
+  }, [schoolId]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -66,7 +68,7 @@ const GeneradorPanel = () => {
   const handleSave = async () => {
     if (!resultado) return;
     try {
-      await saveHorarioGenerado({
+      await saveHorarioGenerado(schoolId, {
         fecha: new Date().toISOString(),
         puntuacion: resultado.puntuacion,
         horario: resultado.horario,

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { getConfig, saveConfig } from '../../services/horariosData';
+import { useAuth } from '../../contexts/AuthContext';
 import { Save, Settings2 } from 'lucide-react';
 
 const ConfiguracionHorario = () => {
+  const { schoolId } = useAuth();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const loadConfig = async () => {
     try {
-      const data = await getConfig();
+      const data = await getConfig(schoolId);
       setConfig(data);
     } catch (err) {
       console.error(err);
@@ -62,7 +64,7 @@ const ConfiguracionHorario = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await saveConfig(config.id, config);
+      await saveConfig(schoolId, config.id, config);
       alert('Configuración guardada correctamente.');
     } catch (err) {
       console.error(err);

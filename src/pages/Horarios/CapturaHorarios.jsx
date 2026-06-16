@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getDocentes, getGrupos, getMaterias, getEspacios, createDocente, createGrupo, createMateria, createEspacio, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio } from '../../services/horariosData';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Trash2, Users, BookOpen, MapPin, Grid, Layers } from 'lucide-react';
 import './Horarios.css';
 
 const CapturaHorarios = () => {
+  const { schoolId } = useAuth();
   const [activeTab, setActiveTab] = useState('docentes');
   
   const tabs = [
@@ -33,10 +35,10 @@ const CapturaHorarios = () => {
         })}
       </div>
       <div className="horarios-content-area">
-        {activeTab === 'docentes' && <DocentesTab />}
-        {activeTab === 'grupos' && <GruposTab />}
-        {activeTab === 'materias' && <MateriasTab />}
-        {activeTab === 'espacios' && <EspaciosTab />}
+        {activeTab === 'docentes' && <DocentesTab schoolId={schoolId} />}
+        {activeTab === 'grupos' && <GruposTab schoolId={schoolId} />}
+        {activeTab === 'materias' && <MateriasTab schoolId={schoolId} />}
+        {activeTab === 'espacios' && <EspaciosTab schoolId={schoolId} />}
         {activeTab === 'asignaciones' && (
           <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-text-secondary)' }}>
             <Layers size={64} style={{ opacity: 0.3, marginBottom: '1rem' }} />
@@ -50,23 +52,23 @@ const CapturaHorarios = () => {
 };
 
 // --- DOCENTES ---
-const DocentesTab = () => {
+const DocentesTab = ({ schoolId }) => {
   const [items, setItems] = useState([]);
   const [nombre, setNombre] = useState('');
   
-  const load = async () => setItems(await getDocentes());
-  useEffect(() => { load() }, []);
+  const load = async () => setItems(await getDocentes(schoolId));
+  useEffect(() => { load() }, [schoolId]);
   
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!nombre) return;
-    await createDocente({ nombre, prioridad: 'Media', restricciones: { noPrimeras: false, noUltimas: false } });
+    await createDocente(schoolId, { nombre, prioridad: 'Media', restricciones: { noPrimeras: false, noUltimas: false } });
     setNombre('');
     load();
   };
 
   const handleDel = async (id) => {
-    await deleteDocente(id);
+    await deleteDocente(schoolId, id);
     load();
   }
 
@@ -117,22 +119,22 @@ const DocentesTab = () => {
 };
 
 // --- GRUPOS ---
-const GruposTab = () => {
+const GruposTab = ({ schoolId }) => {
   const [items, setItems] = useState([]);
   const [grado, setGrado] = useState('1');
   const [grupo, setGrupo] = useState('A');
   
-  const load = async () => setItems(await getGrupos());
-  useEffect(() => { load() }, []);
+  const load = async () => setItems(await getGrupos(schoolId));
+  useEffect(() => { load() }, [schoolId]);
   
   const handleAdd = async (e) => {
     e.preventDefault();
-    await createGrupo({ grado, grupo, turno: 'Matutino' });
+    await createGrupo(schoolId, { grado, grupo, turno: 'Matutino' });
     load();
   };
 
   const handleDel = async (id) => {
-    await deleteGrupo(id);
+    await deleteGrupo(schoolId, id);
     load();
   }
 
@@ -193,24 +195,24 @@ const GruposTab = () => {
 };
 
 // --- MATERIAS ---
-const MateriasTab = () => {
+const MateriasTab = ({ schoolId }) => {
   const [items, setItems] = useState([]);
   const [nombre, setNombre] = useState('');
   const [tipo, setTipo] = useState('Normal');
   const [horas, setHoras] = useState(3);
   
-  const load = async () => setItems(await getMaterias());
-  useEffect(() => { load() }, []);
+  const load = async () => setItems(await getMaterias(schoolId));
+  useEffect(() => { load() }, [schoolId]);
   
   const handleAdd = async (e) => {
     e.preventDefault();
-    await createMateria({ nombre, tipo, horasSemanales: Number(horas) });
+    await createMateria(schoolId, { nombre, tipo, horasSemanales: Number(horas) });
     setNombre('');
     load();
   };
 
   const handleDel = async (id) => {
-    await deleteMateria(id);
+    await deleteMateria(schoolId, id);
     load();
   }
 
@@ -285,22 +287,22 @@ const MateriasTab = () => {
 };
 
 // --- ESPACIOS ---
-const EspaciosTab = () => {
+const EspaciosTab = ({ schoolId }) => {
   const [items, setItems] = useState([]);
   const [nombre, setNombre] = useState('');
   
-  const load = async () => setItems(await getEspacios());
-  useEffect(() => { load() }, []);
+  const load = async () => setItems(await getEspacios(schoolId));
+  useEffect(() => { load() }, [schoolId]);
   
   const handleAdd = async (e) => {
     e.preventDefault();
-    await createEspacio({ nombre, tipo: 'Aula' });
+    await createEspacio(schoolId, { nombre, tipo: 'Aula' });
     setNombre('');
     load();
   };
 
   const handleDel = async (id) => {
-    await deleteEspacio(id);
+    await deleteEspacio(schoolId, id);
     load();
   }
 
