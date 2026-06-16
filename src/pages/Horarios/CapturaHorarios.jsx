@@ -217,6 +217,7 @@ const MateriasTab = ({ schoolId }) => {
   }
 
   const getBadgeClass = (tipo) => {
+    if (!tipo) return 'badge-neutral';
     if (tipo.includes('Física') || tipo.includes('Química')) return 'badge-error';
     if (tipo.includes('Taller')) return 'badge-warning';
     return 'badge-neutral';
