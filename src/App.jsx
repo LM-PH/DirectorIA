@@ -16,7 +16,7 @@ import Permisos from './pages/Permisos/Permisos';
 import Bandeja from './pages/Bandeja/Bandeja';
 import Reportes from './pages/Reportes/Reportes';
 import Configuracion from './pages/Configuracion/Configuracion';
-import HorariosLayout from './pages/horarios/HorariosLayout';
+import HorariosLayout from './pages/Horarios/HorariosLayout';
 import Comisiones from './pages/Comisiones/Comisiones';
 import PortalDocente from './pages/Portal/PortalDocente';
 import AdminPanel from './pages/Admin/AdminPanel';
