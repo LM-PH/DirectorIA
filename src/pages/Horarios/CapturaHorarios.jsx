@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { getDocentes, getGrupos, getMaterias, getEspacios, getAsignaciones, createDocente, createGrupo, createMateria, createEspacio, createAsignacion, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio, deleteAsignacion } from '../../services/horariosData';
 import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Trash2, Users, BookOpen, MapPin, Grid, Layers } from 'lucide-react';
