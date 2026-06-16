@@ -24,7 +24,13 @@ const VistaGeneral = () => {
         getHorariosGenerados(schoolId)
       ]);
       setConfig(conf);
-      setGrupos(g.sort((a, b) => a.grado - b.grado || a.grupo.localeCompare(b.grupo)));
+      setGrupos(g.sort((a, b) => {
+        const gradoA = Number(a.grado) || 0;
+        const gradoB = Number(b.grado) || 0;
+        const grupoA = a.grupo || '';
+        const grupoB = b.grupo || '';
+        return gradoA - gradoB || grupoA.localeCompare(grupoB);
+      }));
       setDocentes(d);
       setMaterias(m);
 
@@ -70,9 +76,9 @@ const VistaGeneral = () => {
     1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 0: 'Domingo'
   };
 
-  const diasLaborables = config.diasLaborables || [1, 2, 3, 4, 5];
-  const modulosPorDia = config.modulosPorDia || 7;
-  const recesoIndex = config.receso?.despuesDeModulo || 3;
+  const diasLaborables = config?.diasLaborables || [1, 2, 3, 4, 5];
+  const modulosPorDia = config?.modulosPorDia || 7;
+  const recesoIndex = config?.receso?.despuesDeModulo || 3;
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s ease-out' }}>
@@ -135,9 +141,9 @@ const VistaGeneral = () => {
                     </td>
                     {diasLaborables.map(dia => {
                       // Buscar asignación para este grupo, día y módulo
-                      const slot = horarioDb.horario.find(h => 
-                        h.grupoId === selectedGrupo && h.dia === dia && h.modulo === mIdx
-                      );
+                      const slot = Array.isArray(horarioDb.horario) 
+                        ? horarioDb.horario.find(h => h.grupoId === selectedGrupo && h.dia === dia && h.modulo === mIdx)
+                        : null;
 
                       return (
                         <td key={`${dia}-${mIdx}`}>
