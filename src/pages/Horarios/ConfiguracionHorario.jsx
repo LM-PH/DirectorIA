@@ -7,10 +7,6 @@ const ConfiguracionHorario = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
   const loadConfig = async () => {
     try {
       const data = await getConfig();
@@ -21,6 +17,10 @@ const ConfiguracionHorario = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;

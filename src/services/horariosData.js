@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 const COLLECTIONS = {
@@ -17,11 +17,7 @@ const getAll = async (collectionName) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-const getById = async (collectionName, id) => {
-  const docRef = doc(db, collectionName, id);
-  const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
-};
+
 
 const create = async (collectionName, data) => {
   const docRef = await addDoc(collection(db, collectionName), data);

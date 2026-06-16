@@ -91,25 +91,25 @@ export class ScheduleGenerator {
     return clases;
   }
 
-  paso2_colocarBloquesFijos(clases) {
+  paso2_colocarBloquesFijos() {
     // Iterar clases de tipo "7. Bloque fijo"
   }
 
-  paso3_colocarTalleres(clases) {
+  paso3_colocarTalleres() {
     // Tipo "4. Tecnología/Taller"
     // Buscar bloques de 2 consecutivos
   }
 
-  paso4_colocarFisicaYQuimica(clases) {
+  paso4_colocarFisicaYQuimica() {
     // Tipo "2. Física", "3. Química"
     // Obligatorio bloque doble, no cruza receso (receso en config)
   }
 
-  paso5_colocarRestricciones(clases) {
+  paso5_colocarRestricciones() {
     // Materias especiales o con docentes con restricciones fuertes
   }
 
-  paso6_colocarNormales(clases) {
+  paso6_colocarNormales() {
     // Materias restantes. Buscar el primer hueco disponible iterando dias y módulos.
   }
 

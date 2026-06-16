@@ -50,8 +50,8 @@ const DocentesTab = () => {
   const [items, setItems] = useState([]);
   const [nombre, setNombre] = useState('');
   
-  useEffect(() => { load() }, []);
   const load = async () => setItems(await getDocentes());
+  useEffect(() => { load() }, []);
   
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -91,8 +91,8 @@ const GruposTab = () => {
   const [grado, setGrado] = useState('1');
   const [grupo, setGrupo] = useState('A');
   
-  useEffect(() => { load() }, []);
   const load = async () => setItems(await getGrupos());
+  useEffect(() => { load() }, []);
   
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -134,8 +134,8 @@ const MateriasTab = () => {
   const [tipo, setTipo] = useState('Normal');
   const [horas, setHoras] = useState(3);
   
-  useEffect(() => { load() }, []);
   const load = async () => setItems(await getMaterias());
+  useEffect(() => { load() }, []);
   
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -184,8 +184,8 @@ const EspaciosTab = () => {
   const [items, setItems] = useState([]);
   const [nombre, setNombre] = useState('');
   
-  useEffect(() => { load() }, []);
   const load = async () => setItems(await getEspacios());
+  useEffect(() => { load() }, []);
   
   const handleAdd = async (e) => {
     e.preventDefault();
