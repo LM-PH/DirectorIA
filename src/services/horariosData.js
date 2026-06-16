@@ -7,6 +7,7 @@ const COLLECTIONS = {
   GRUPOS: 'horarios_grupos',
   MATERIAS: 'horarios_materias',
   ESPACIOS: 'horarios_espacios',
+  ASIGNACIONES: 'horarios_asignaciones',
   GENERADOS: 'horarios_generados',
 };
 
@@ -116,6 +117,12 @@ export const getEspacios = (schoolId) => getAll(schoolId, COLLECTIONS.ESPACIOS);
 export const createEspacio = (schoolId, data) => create(schoolId, COLLECTIONS.ESPACIOS, data);
 export const updateEspacio = (schoolId, id, data) => update(schoolId, COLLECTIONS.ESPACIOS, id, data);
 export const deleteEspacio = (schoolId, id) => remove(schoolId, COLLECTIONS.ESPACIOS, id);
+
+// --- Asignaciones ---
+export const getAsignaciones = (schoolId) => getAll(schoolId, COLLECTIONS.ASIGNACIONES);
+export const createAsignacion = (schoolId, data) => create(schoolId, COLLECTIONS.ASIGNACIONES, data);
+export const updateAsignacion = (schoolId, id, data) => update(schoolId, COLLECTIONS.ASIGNACIONES, id, data);
+export const deleteAsignacion = (schoolId, id) => remove(schoolId, COLLECTIONS.ASIGNACIONES, id);
 
 // --- Horarios Generados ---
 export const getHorariosGenerados = (schoolId) => getAll(schoolId, COLLECTIONS.GENERADOS);
