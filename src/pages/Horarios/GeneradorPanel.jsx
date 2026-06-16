@@ -3,6 +3,7 @@ import { Play, AlertTriangle, CheckCircle, Save, Cpu, Zap, BarChart2, ShieldChec
 import { getConfig, getDocentes, getGrupos, getMaterias, getEspacios, saveHorarioGenerado } from '../../services/horariosData';
 import { ScheduleGenerator } from '../../services/ScheduleGenerator';
 import { ScheduleValidator } from '../../services/ScheduleValidator';
+import './Horarios.css';
 
 const GeneradorPanel = () => {
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ const GeneradorPanel = () => {
     setProgreso(10);
     setResultado(null);
 
-    await new Promise(r => setTimeout(r, 800)); // Animación
+    await new Promise(r => setTimeout(r, 800)); // Simulando
     setProgreso(40);
 
     try {
@@ -42,7 +43,7 @@ const GeneradorPanel = () => {
       const output = generator.generar();
       
       setProgreso(75);
-      await new Promise(r => setTimeout(r, 600)); // Animación validación
+      await new Promise(r => setTimeout(r, 600)); // Validación
 
       const validator = new ScheduleValidator(config, output.horario, docentes, grupos, espacios);
       const validacion = validator.validar();
@@ -79,143 +80,95 @@ const GeneradorPanel = () => {
   };
 
   if (!dataReady) return (
-    <div className="flex flex-col items-center justify-center h-64 space-y-4">
-      <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-      <p className="text-indigo-600 font-bold tracking-widest uppercase text-sm animate-pulse">Inicializando Motor Neuronal...</p>
+    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-primary)' }}>
+      Inicializando Motor IA...
     </div>
   );
 
   return (
-    <div className="max-w-4xl mx-auto">
-      
-      <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-200/40 border border-slate-100 overflow-hidden relative">
-        {/* Glow effect */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none"></div>
-        
-        <div className="p-10 text-center relative z-10">
-          <div className="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-300 transform rotate-3 hover:rotate-0 transition-all duration-500 mb-6">
-            <Cpu size={48} className="text-white" />
-          </div>
-          
-          <h2 className="text-4xl font-black text-slate-800 mb-4 tracking-tight">Motor Generador IA</h2>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
-            El algoritmo procesará <span className="font-bold text-indigo-600">{grupos.length}</span> grupos y <span className="font-bold text-indigo-600">{docentes.length}</span> docentes buscando la permutación óptima, respetando restricciones de módulos dobles, talleres y recesos.
-          </p>
+    <div>
+      <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem', marginBottom: '2rem' }}>
+        <Cpu size={48} style={{ color: 'var(--color-primary)', marginBottom: '1rem' }} />
+        <h2 className="module-title">Motor Generador IA</h2>
+        <p className="module-description" style={{ maxWidth: '600px', margin: '0 auto 2rem auto' }}>
+          El algoritmo procesará {grupos.length} grupos y {docentes.length} docentes buscando la permutación óptima, respetando restricciones de módulos dobles, talleres y recesos.
+        </p>
 
-          <div className="mt-12">
-            {!loading && !resultado && (
-              <button
-                onClick={handleGenerate}
-                className="group relative inline-flex items-center gap-3 px-10 py-5 bg-slate-900 hover:bg-black text-white text-lg font-black rounded-2xl transition-all shadow-xl shadow-slate-400 overflow-hidden"
-              >
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <Zap size={24} className="text-amber-400 relative z-10 animate-pulse" />
-                <span className="relative z-10">Iniciación Cuántica (Generar)</span>
-              </button>
-            )}
+        {!loading && !resultado && (
+          <button onClick={handleGenerate} className="btn-primary" style={{ fontSize: '1.1rem', padding: '1rem 2rem' }}>
+            <Zap size={24} /> Ejecutar Generador
+          </button>
+        )}
 
-            {loading && (
-              <div className="max-w-md mx-auto bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
-                <div className="flex justify-between text-sm font-bold text-slate-600 mb-3">
-                  <span>Procesando Heurística...</span>
-                  <span className="text-indigo-600">{progreso}%</span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner">
-                  <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-300 ease-out relative" style={{ width: `${progreso}%` }}>
-                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1s_infinite]"></div>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400 mt-4 uppercase tracking-widest">{progreso < 50 ? 'Asignando Bloques Fijos...' : progreso < 80 ? 'Optimizando Huecos...' : 'Validando Conflictos...'}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* RESULTADOS */}
-        {resultado && !loading && (
-          <div className="bg-slate-50 border-t border-slate-200 p-8 animate-in slide-in-from-bottom-8 duration-700">
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* Score Card */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-6">
-                <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center border-4 border-indigo-100">
-                  <BarChart2 size={28} className="text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Puntuación Total</p>
-                  <p className="text-4xl font-black text-indigo-600">{resultado.puntuacion}</p>
-                </div>
-              </div>
-
-              {/* Status Card */}
-              <div className={`bg-white rounded-2xl p-6 border shadow-sm flex items-center gap-6 ${resultado.esValido ? 'border-emerald-200' : 'border-red-200'}`}>
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${resultado.esValido ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
-                  {resultado.esValido ? <ShieldCheck size={28} className="text-emerald-600" /> : <ServerCrash size={28} className="text-red-600" />}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Estado del Horario</p>
-                  <p className={`text-3xl font-black ${resultado.esValido ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {resultado.esValido ? 'Válido' : 'Inválido'}
-                  </p>
-                </div>
-              </div>
+        {loading && (
+          <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', maxWidth: '500px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontWeight: 'bold' }}>
+              <span>Procesando Heurística...</span>
+              <span style={{ color: 'var(--color-primary)' }}>{progreso}%</span>
             </div>
-
-            {/* Conflictos Log */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
-                <h4 className="font-bold text-white flex items-center gap-2">
-                  <AlertTriangle size={18} className={resultado.conflictos.length > 0 ? "text-amber-400" : "text-slate-500"} />
-                  Log del Validador
-                </h4>
-                <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  {resultado.conflictos.length} Alertas
-                </span>
-              </div>
-              <div className="p-6 max-h-72 overflow-auto custom-scrollbar space-y-3 bg-slate-800 text-slate-300 font-mono text-sm">
-                {resultado.conflictos.length === 0 ? (
-                  <p className="text-emerald-400 flex items-center gap-2"><CheckCircle size={16}/> [SYS] 0 conflictos detectados. Validación superada.</p>
-                ) : (
-                  resultado.conflictos.map((c, idx) => (
-                    <div key={idx} className="flex items-start gap-3 border-b border-slate-700/50 pb-3 last:border-0 last:pb-0">
-                      <span className="text-red-400 mt-0.5">[ERROR]</span>
-                      <span className="text-slate-300">{c.mensaje}</span>
-                    </div>
-                  ))
-                )}
-              </div>
+            <div style={{ width: '100%', background: '#e2e8f0', borderRadius: '999px', height: '10px', overflow: 'hidden' }}>
+              <div style={{ background: 'var(--color-primary)', height: '100%', width: `${progreso}%`, transition: 'width 0.3s ease' }}></div>
             </div>
-
-            {/* Actions */}
-            <div className="flex justify-end pt-8 gap-4">
-              <button 
-                onClick={handleGenerate}
-                className="px-6 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all shadow-sm"
-              >
-                Regenerar
-              </button>
-              <button 
-                onClick={handleSave}
-                disabled={!resultado.esValido && resultado.conflictos.length > 0} // Si se desea obligar
-                className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save size={20} /> Aprobar y Guardar
-              </button>
-            </div>
-
           </div>
         )}
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes shimmer {
-          100% { transform: translateX(100%); }
-        }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-      `}} />
+
+      {/* RESULTADOS */}
+      {resultado && !loading && (
+        <div className="card" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+          <h3 className="module-title" style={{ marginBottom: '1.5rem' }}>Resultados del Generador</h3>
+          
+          <div className="generator-status-panel">
+            <div className="quality-card" style={{ '--q-color': 'var(--color-primary)', '--q-val': (resultado.puntuacion / 100) * 100 }}>
+              <div className="quality-progress-circle">
+                <span className="quality-value-text">{resultado.puntuacion}</span>
+              </div>
+              <div className="quality-info">
+                <span className="quality-title">Puntuación de Calidad</span>
+                <span className="quality-score">{resultado.puntuacion} / 100</span>
+              </div>
+            </div>
+
+            <div className="quality-card" style={{ '--q-color': resultado.esValido ? 'var(--color-success)' : 'var(--color-error)', '--q-val': 100 }}>
+              <div className="quality-progress-circle">
+                <span className="quality-value-text">
+                  {resultado.esValido ? <ShieldCheck size={28} color="var(--color-success)" /> : <ServerCrash size={28} color="var(--color-error)" />}
+                </span>
+              </div>
+              <div className="quality-info">
+                <span className="quality-title">Estado del Horario</span>
+                <span className="quality-score" style={{ color: resultado.esValido ? 'var(--color-success)' : 'var(--color-error)' }}>
+                  {resultado.esValido ? 'Válido' : 'Con Conflictos'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="conflicts-panel" style={{ background: resultado.conflictos.length === 0 ? '#f0fdf4' : '#fef2f2', borderColor: resultado.conflictos.length === 0 ? '#d1fae5' : '#fee2e2', borderLeftColor: resultado.conflictos.length === 0 ? '#10b981' : '#ef4444' }}>
+            <div className="conflicts-header" style={{ color: resultado.conflictos.length === 0 ? '#065f46' : '#991b1b' }}>
+              {resultado.conflictos.length === 0 ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+              Log del Validador ({resultado.conflictos.length} alertas)
+            </div>
+            
+            {resultado.conflictos.length > 0 && (
+              <ul className="conflicts-list">
+                {resultado.conflictos.map((c, idx) => (
+                  <li key={idx}>{c.mensaje}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
+            <button onClick={handleGenerate} className="btn-secondary">
+              Regenerar
+            </button>
+            <button onClick={handleSave} className="btn-primary" style={{ background: 'var(--color-accent)' }}>
+              <Save size={18} /> Aprobar y Guardar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

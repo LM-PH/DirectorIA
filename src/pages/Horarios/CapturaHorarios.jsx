@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDocentes, getGrupos, getMaterias, getEspacios, createDocente, createGrupo, createMateria, createEspacio, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio } from '../../services/horariosData';
-import { Plus, Trash2, Users, BookOpen, MapPin, Grid, Layers, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Users, BookOpen, MapPin, Grid, Layers } from 'lucide-react';
+import './Horarios.css';
 
 const CapturaHorarios = () => {
   const [activeTab, setActiveTab] = useState('docentes');
@@ -14,54 +15,35 @@ const CapturaHorarios = () => {
   ];
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl shadow-indigo-100/50 border border-slate-100 min-h-[700px] flex overflow-hidden">
-      
-      {/* Sidebar Navigation */}
-      <div className="w-72 bg-gradient-to-b from-slate-50 to-slate-100/50 border-r border-slate-200 p-6 flex flex-col">
-        <div className="mb-8">
-          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Administración</h3>
-          <p className="text-xl font-bold text-slate-800 px-4">Catálogos</p>
-        </div>
-        
-        <div className="space-y-2 flex-1">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                  isActive 
-                  ? 'bg-white text-indigo-600 shadow-sm shadow-indigo-100 border border-indigo-50/50 scale-100' 
-                  : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-800 scale-95 hover:scale-100 border border-transparent'
-                }`}
-              >
-                <Icon size={20} className={isActive ? 'text-indigo-500' : 'text-slate-400'} />
-                {tab.name}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />}
-              </button>
-            );
-          })}
-        </div>
-        
-        <div className="mt-auto p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-          <div className="flex items-center gap-2 text-indigo-800 font-bold mb-1">
-            <Sparkles size={16} className="text-indigo-500" /> Tips
-          </div>
-          <p className="text-xs text-indigo-600 font-medium">Registra todos los datos antes de pasar al motor generador para evitar conflictos.</p>
-        </div>
+    <div className="horarios-layout module-container">
+      <div className="horarios-tabs-sidebar card">
+        <h3 style={{ padding: '8px 16px', fontSize: '0.85rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Catálogos</h3>
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`horarios-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <Icon size={18} />
+              {tab.name}
+            </button>
+          );
+        })}
       </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 bg-white p-8 relative overflow-auto custom-scrollbar">
-        <div className="max-w-4xl animate-in fade-in slide-in-from-right-4 duration-500">
-          {activeTab === 'docentes' && <DocentesTab />}
-          {activeTab === 'grupos' && <GruposTab />}
-          {activeTab === 'materias' && <MateriasTab />}
-          {activeTab === 'espacios' && <EspaciosTab />}
-          {activeTab === 'asignaciones' && <AsignacionesTab />}
-        </div>
+      <div className="horarios-content-area">
+        {activeTab === 'docentes' && <DocentesTab />}
+        {activeTab === 'grupos' && <GruposTab />}
+        {activeTab === 'materias' && <MateriasTab />}
+        {activeTab === 'espacios' && <EspaciosTab />}
+        {activeTab === 'asignaciones' && (
+          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-text-secondary)' }}>
+            <Layers size={64} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+            <h2 style={{ color: 'var(--color-primary)' }}>Matriz de Asignaciones</h2>
+            <p>Aquí se cruzarán Docentes ↔ Materias ↔ Grupos en la próxima actualización.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -89,38 +71,47 @@ const DocentesTab = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 border-b pb-4">
-        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Users size={28} /></div>
+    <div>
+      <div className="tab-header">
         <div>
-          <h2 className="text-2xl font-black text-slate-800">Directorio de Docentes</h2>
-          <p className="text-slate-500 text-sm">Gestiona el personal docente de la escuela.</p>
+          <h2>Directorio de Docentes</h2>
+          <p className="tab-header-description">Gestiona el personal docente de la escuela.</p>
         </div>
       </div>
       
-      <form onSubmit={handleAdd} className="flex gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Nombre completo del docente..." className="flex-1 p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" required/>
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 transition-all transform hover:scale-105">
+      <form onSubmit={handleAdd} className="card" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'flex-end' }}>
+        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label>Nombre del Docente</label>
+          <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. Juan Pérez..." required/>
+        </div>
+        <button type="submit" className="btn-primary">
           <Plus size={18}/> Agregar
         </button>
       </form>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {items.map(item => (
-          <div key={item.id} className="group flex justify-between items-center p-4 bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 rounded-2xl transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-600 font-bold uppercase border border-blue-200">
-                {item.nombre.charAt(0)}
-              </div>
-              <span className="font-bold text-slate-700">{item.nombre}</span>
-            </div>
-            <button onClick={() => handleDel(item.id)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-              <Trash2 size={18}/>
-            </button>
-          </div>
-        ))}
-        {items.length === 0 && <p className="text-slate-400 italic col-span-2 text-center py-8">No hay docentes registrados.</p>}
-      </div>
+      <table className="table-modern">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => (
+            <tr key={item.id}>
+              <td style={{ fontWeight: 500 }}>{item.nombre}</td>
+              <td style={{ textAlign: 'center' }}>
+                <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
+                  <Trash2 size={16}/>
+                </button>
+              </td>
+            </tr>
+          ))}
+          {items.length === 0 && (
+            <tr><td colSpan="2" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>No hay docentes registrados.</td></tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -146,39 +137,57 @@ const GruposTab = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 border-b pb-4">
-        <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><Grid size={28} /></div>
+    <div>
+      <div className="tab-header">
         <div>
-          <h2 className="text-2xl font-black text-slate-800">Grupos Escolares</h2>
-          <p className="text-slate-500 text-sm">Organización de grados y secciones.</p>
+          <h2>Grupos Escolares</h2>
+          <p className="tab-header-description">Organización de grados y secciones.</p>
         </div>
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <select value={grado} onChange={e=>setGrado(e.target.value)} className="p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none font-bold text-slate-700 w-32">
-          <option value="1">1er Grado</option><option value="2">2do Grado</option><option value="3">3er Grado</option>
-        </select>
-        <input value={grupo} onChange={e=>setGrupo(e.target.value)} placeholder="Letra (A, B...)" className="p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none font-bold text-slate-700 w-32 text-center" required/>
-        <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all transform hover:scale-105 ml-auto">
+      <form onSubmit={handleAdd} className="card" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'flex-end' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Grado</label>
+          <select value={grado} onChange={e=>setGrado(e.target.value)}>
+            <option value="1">1er Grado</option><option value="2">2do Grado</option><option value="3">3er Grado</option>
+          </select>
+        </div>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Grupo / Sección</label>
+          <input value={grupo} onChange={e=>setGrupo(e.target.value)} placeholder="Letra (A, B...)" required style={{ width: '150px' }}/>
+        </div>
+        <button type="submit" className="btn-primary">
           <Plus size={18}/> Agregar Grupo
         </button>
       </form>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {items.map(item => (
-          <div key={item.id} className="group relative bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden border border-emerald-400">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-10 rounded-full blur-xl transform translate-x-1/2 -translate-y-1/2"></div>
-            <div className="flex flex-col items-center justify-center">
-              <span className="text-4xl font-black">{item.grado}°{item.grupo}</span>
-              <span className="text-emerald-100 text-xs font-bold mt-1 tracking-widest uppercase">{item.turno}</span>
-            </div>
-            <button onClick={() => handleDel(item.id)} className="absolute top-2 right-2 text-white/50 hover:text-white hover:bg-black/20 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-              <Trash2 size={16}/>
-            </button>
-          </div>
-        ))}
-      </div>
+      <table className="table-modern">
+        <thead>
+          <tr>
+            <th>Grado</th>
+            <th>Grupo</th>
+            <th>Turno</th>
+            <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => (
+            <tr key={item.id}>
+              <td style={{ fontWeight: 600 }}>{item.grado}°</td>
+              <td style={{ fontWeight: 600 }}>{item.grupo}</td>
+              <td><span className="badge badge-info">{item.turno}</span></td>
+              <td style={{ textAlign: 'center' }}>
+                <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
+                  <Trash2 size={16}/>
+                </button>
+              </td>
+            </tr>
+          ))}
+          {items.length === 0 && (
+            <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>No hay grupos registrados.</td></tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -205,56 +214,72 @@ const MateriasTab = () => {
     load();
   }
 
-  const getBadgeColor = (tipo) => {
-    if (tipo.includes('Física') || tipo.includes('Química')) return 'bg-purple-100 text-purple-700 border-purple-200';
-    if (tipo.includes('Taller')) return 'bg-amber-100 text-amber-700 border-amber-200';
-    return 'bg-slate-100 text-slate-600 border-slate-200';
+  const getBadgeClass = (tipo) => {
+    if (tipo.includes('Física') || tipo.includes('Química')) return 'badge-error';
+    if (tipo.includes('Taller')) return 'badge-warning';
+    return 'badge-neutral';
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 border-b pb-4">
-        <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><BookOpen size={28} /></div>
+    <div>
+      <div className="tab-header">
         <div>
-          <h2 className="text-2xl font-black text-slate-800">Catálogo de Materias</h2>
-          <p className="text-slate-500 text-sm">Define las asignaturas y sus reglas de bloques especiales.</p>
+          <h2>Catálogo de Materias</h2>
+          <p className="tab-header-description">Define las asignaturas y sus reglas de bloques especiales.</p>
         </div>
       </div>
 
-      <form onSubmit={handleAdd} className="flex flex-wrap gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Nombre materia..." className="flex-[2] min-w-[200px] p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none font-medium text-slate-700" required/>
-        <select value={tipo} onChange={e=>setTipo(e.target.value)} className="flex-1 min-w-[150px] p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-slate-700">
-          <option value="Normal">Normal</option>
-          <option value="Física">Física (Req. Doble)</option>
-          <option value="Química">Química (Req. Doble)</option>
-          <option value="Taller">Taller (Doble Bloque)</option>
-          <option value="Educación Física">Educación Física</option>
-        </select>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 focus-within:ring-4 focus-within:ring-purple-500/20 focus-within:border-purple-500 transition-all">
-          <span className="text-xs font-bold text-slate-400">HRS</span>
-          <input type="number" value={horas} onChange={e=>setHoras(e.target.value)} className="w-12 py-3 bg-transparent outline-none font-bold text-slate-700 text-center" min="1" max="15"/>
+      <form onSubmit={handleAdd} className="card config-form-grid" style={{ marginBottom: '2rem', alignItems: 'flex-end', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div className="form-group" style={{ flex: 2, minWidth: '200px', marginBottom: 0 }}>
+          <label>Nombre de Materia</label>
+          <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. Matemáticas" required/>
         </div>
-        <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-purple-200 transition-all transform hover:scale-105">
+        <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
+          <label>Tipo / Restricción</label>
+          <select value={tipo} onChange={e=>setTipo(e.target.value)}>
+            <option value="Normal">Normal</option>
+            <option value="Física">Física (Req. Doble)</option>
+            <option value="Química">Química (Req. Doble)</option>
+            <option value="Taller">Taller (Doble Bloque)</option>
+            <option value="Educación Física">Educación Física</option>
+          </select>
+        </div>
+        <div className="form-group" style={{ width: '100px', marginBottom: 0 }}>
+          <label>Horas</label>
+          <input type="number" value={horas} onChange={e=>setHoras(e.target.value)} min="1" max="15" required/>
+        </div>
+        <button type="submit" className="btn-primary" style={{ marginBottom: 0 }}>
           <Plus size={18}/> Add
         </button>
       </form>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {items.map(item => (
-          <div key={item.id} className="group flex justify-between items-center p-4 bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-purple-200 rounded-2xl transition-all">
-            <div>
-              <span className="font-bold text-slate-800 block text-lg">{item.nombre}</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{item.horasSemanales} HRS</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded border ${getBadgeColor(item.tipo)}`}>{item.tipo}</span>
-              </div>
-            </div>
-            <button onClick={() => handleDel(item.id)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-              <Trash2 size={18}/>
-            </button>
-          </div>
-        ))}
-      </div>
+      <table className="table-modern">
+        <thead>
+          <tr>
+            <th>Materia</th>
+            <th>Tipo</th>
+            <th>Horas Semanales</th>
+            <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => (
+            <tr key={item.id}>
+              <td style={{ fontWeight: 500 }}>{item.nombre}</td>
+              <td><span className={`badge ${getBadgeClass(item.tipo)}`}>{item.tipo}</span></td>
+              <td>{item.horasSemanales} HRS</td>
+              <td style={{ textAlign: 'center' }}>
+                <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
+                  <Trash2 size={16}/>
+                </button>
+              </td>
+            </tr>
+          ))}
+          {items.length === 0 && (
+            <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>No hay materias registradas.</td></tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -280,53 +305,49 @@ const EspaciosTab = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 border-b pb-4">
-        <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><MapPin size={28} /></div>
+    <div>
+      <div className="tab-header">
         <div>
-          <h2 className="text-2xl font-black text-slate-800">Espacios Físicos</h2>
-          <p className="text-slate-500 text-sm">Carga las aulas, laboratorios y canchas disponibles.</p>
+          <h2>Espacios Físicos</h2>
+          <p className="tab-header-description">Aulas, laboratorios y canchas disponibles.</p>
         </div>
       </div>
 
-      <form onSubmit={handleAdd} className="flex gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. Laboratorio de Cómputo B..." className="flex-1 p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 transition-all outline-none font-medium text-slate-700" required/>
-        <button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-amber-200 transition-all transform hover:scale-105">
+      <form onSubmit={handleAdd} className="card" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'flex-end' }}>
+        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label>Nombre del Espacio</label>
+          <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. Laboratorio de Cómputo B..." required/>
+        </div>
+        <button type="submit" className="btn-primary">
           <Plus size={18}/> Agregar
         </button>
       </form>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {items.map(item => (
-          <div key={item.id} className="group relative bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-amber-200 transition-all flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-3">
-              <MapPin size={24} />
-            </div>
-            <span className="font-bold text-slate-700">{item.nombre}</span>
-            <button onClick={() => handleDel(item.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-              <Trash2 size={16}/>
-            </button>
-          </div>
-        ))}
-      </div>
+      <table className="table-modern">
+        <thead>
+          <tr>
+            <th>Espacio</th>
+            <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => (
+            <tr key={item.id}>
+              <td style={{ fontWeight: 500 }}>{item.nombre}</td>
+              <td style={{ textAlign: 'center' }}>
+                <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
+                  <Trash2 size={16}/>
+                </button>
+              </td>
+            </tr>
+          ))}
+          {items.length === 0 && (
+            <tr><td colSpan="2" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>No hay espacios registrados.</td></tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };
-
-// --- ASIGNACIONES ---
-const AsignacionesTab = () => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-center py-20 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
-      <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-        <Layers size={40} className="text-indigo-400" />
-      </div>
-      <h2 className="text-2xl font-black text-slate-800 mb-2">Matriz de Asignaciones</h2>
-      <p className="text-slate-500 max-w-md font-medium">
-        Aquí se cruzarán Docentes ↔ Materias ↔ Grupos.<br/><br/>
-        <span className="text-sm bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg inline-block">Esta vista compleja está en desarrollo.</span>
-      </p>
-    </div>
-  )
-}
 
 export default CapturaHorarios;
