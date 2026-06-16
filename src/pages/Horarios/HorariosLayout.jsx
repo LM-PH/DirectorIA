@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ConfiguracionHorario from './ConfiguracionHorario';
 import CapturaHorarios from './CapturaHorarios';
 import GeneradorPanel from './GeneradorPanel';
+import VistaGeneral from './VistaGeneral';
 import { Settings, Users, Cpu, Calendar } from 'lucide-react';
 import './Horarios.css';
 
@@ -37,13 +38,7 @@ const HorariosLayout = () => {
         {activeTab === 'config' && <ConfiguracionHorario />}
         {activeTab === 'captura' && <CapturaHorarios />}
         {activeTab === 'generador' && <GeneradorPanel />}
-        {activeTab === 'vista' && (
-          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-text-secondary)' }}>
-            <Calendar size={64} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-            <h2 style={{ color: 'var(--color-primary)' }}>Vista General de Horarios</h2>
-            <p>La cuadrícula interactiva estará disponible próximamente.</p>
-          </div>
-        )}
+        {activeTab === 'vista' && <VistaGeneral />}
       </div>
     </div>
   );
