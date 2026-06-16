@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getDocentes, getGrupos, getMaterias, getEspacios, getAsignaciones, createDocente, createGrupo, createMateria, createEspacio, createAsignacion, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio, deleteAsignacion } from '../../services/horariosData';
+import { getDocentes, getGrupos, getMaterias, getEspacios, getAsignaciones, createDocente, createGrupo, createMateria, createEspacio, createAsignacion, updateAsignacion, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio, deleteAsignacion } from '../../services/horariosData';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, Trash2, Users, BookOpen, MapPin, Grid, Layers } from 'lucide-react';
+import { Plus, Trash2, Edit2, Users, BookOpen, MapPin, Grid, Layers } from 'lucide-react';
 import './Horarios.css';
 
 const CapturaHorarios = () => {
@@ -356,6 +356,7 @@ const AsignacionesTab = ({ schoolId }) => {
   const [espacios, setEspacios] = useState([]);
 
   const [form, setForm] = useState({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3 });
+  const [editingId, setEditingId] = useState(null);
 
   const load = async () => {
     const [a, d, m, g, e] = await Promise.all([
@@ -373,9 +374,25 @@ const AsignacionesTab = ({ schoolId }) => {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!form.docenteId || !form.materiaId) return;
-    await createAsignacion(schoolId, form);
+    if (editingId) {
+      await updateAsignacion(schoolId, editingId, form);
+      setEditingId(null);
+    } else {
+      await createAsignacion(schoolId, form);
+    }
     setForm({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3 });
     load();
+  };
+
+  const handleEdit = (item) => {
+    setForm({
+      docenteId: item.docenteId || '',
+      materiaId: item.materiaId || '',
+      grupoId: item.grupoId || '',
+      espacioId: item.espacioId || '',
+      horas: item.horas || 3
+    });
+    setEditingId(item.id);
   };
 
   const handleDel = async (id) => {
@@ -432,8 +449,16 @@ const AsignacionesTab = ({ schoolId }) => {
           <input type="number" value={form.horas} onChange={e=>setForm({...form, horas: Number(e.target.value)})} min="1" max="15" required/>
         </div>
         <button type="submit" className="btn-primary" style={{ marginBottom: 0 }}>
-          <Plus size={18}/> Add
+          {editingId ? <Edit2 size={18}/> : <Plus size={18}/>} {editingId ? 'Guardar' : 'Add'}
         </button>
+        {editingId && (
+          <button type="button" className="btn-secondary" style={{ marginBottom: 0 }} onClick={() => {
+            setEditingId(null);
+            setForm({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3 });
+          }}>
+            Cancelar
+          </button>
+        )}
       </form>
 
       <table className="table-modern">
@@ -455,7 +480,10 @@ const AsignacionesTab = ({ schoolId }) => {
               <td><span className={`badge ${item.grupoId ? 'badge-info' : 'badge-warning'}`}>{item.grupoId ? getName(grupos, item.grupoId) : 'Multigrupo (Taller)'}</span></td>
               <td>{item.espacioId ? getName(espacios, item.espacioId) : <span style={{color:'#94a3b8'}}>-</span>}</td>
               <td>{item.horas} HRS</td>
-              <td style={{ textAlign: 'center' }}>
+              <td style={{ textAlign: 'center', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                <button onClick={() => handleEdit(item)} className="btn-secondary" style={{ padding: '0.4rem', background: '#e2e8f0', color: '#475569', border: 'none' }}>
+                  <Edit2 size={16}/>
+                </button>
                 <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
                   <Trash2 size={16}/>
                 </button>
