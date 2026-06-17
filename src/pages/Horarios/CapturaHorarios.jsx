@@ -48,16 +48,23 @@ const CapturaHorarios = () => {
 // --- DOCENTES ---
 const DocentesTab = ({ schoolId }) => {
   const [items, setItems] = useState([]);
+  const [asignaciones, setAsignaciones] = useState([]);
   const [nombre, setNombre] = useState('');
+  const [horasContratadas, setHorasContratadas] = useState(20);
   
-  const load = async () => setItems(await getDocentes(schoolId));
+  const load = async () => {
+    const [docs, asigs] = await Promise.all([getDocentes(schoolId), getAsignaciones(schoolId)]);
+    setItems(docs);
+    setAsignaciones(asigs);
+  };
   useEffect(() => { load() }, [schoolId]);
   
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!nombre) return;
-    await createDocente(schoolId, { nombre, prioridad: 'Media', restricciones: { noPrimeras: false, noUltimas: false } });
+    await createDocente(schoolId, { nombre, horasContratadas: Number(horasContratadas), prioridad: 'Media', restricciones: { noPrimeras: false, noUltimas: false } });
     setNombre('');
+    setHorasContratadas(20);
     load();
   };
 
@@ -71,16 +78,20 @@ const DocentesTab = ({ schoolId }) => {
       <div className="tab-header">
         <div>
           <h2>Directorio de Docentes</h2>
-          <p className="tab-header-description">Gestiona el personal docente de la escuela.</p>
+          <p className="tab-header-description">Gestiona el personal docente de la escuela y su carga horaria.</p>
         </div>
       </div>
       
-      <form onSubmit={handleAdd} className="card" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'flex-end' }}>
-        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+      <form onSubmit={handleAdd} className="card" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div className="form-group" style={{ flex: 1, minWidth: '200px', marginBottom: 0 }}>
           <label>Nombre del Docente</label>
           <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. Juan Pérez..." required/>
         </div>
-        <button type="submit" className="btn-primary">
+        <div className="form-group" style={{ width: '120px', marginBottom: 0 }}>
+          <label>Hrs Contratadas</label>
+          <input type="number" value={horasContratadas} onChange={e=>setHorasContratadas(e.target.value)} min="1" max="60" required/>
+        </div>
+        <button type="submit" className="btn-primary" style={{ marginBottom: 0 }}>
           <Plus size={18}/> Agregar
         </button>
       </form>
@@ -89,22 +100,42 @@ const DocentesTab = ({ schoolId }) => {
         <thead>
           <tr>
             <th>Nombre</th>
+            <th>Contratadas</th>
+            <th>Asignadas</th>
+            <th>Estado</th>
             <th style={{ width: '80px', textAlign: 'center' }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {items.map(item => (
-            <tr key={item.id}>
-              <td style={{ fontWeight: 500 }}>{item.nombre}</td>
-              <td style={{ textAlign: 'center' }}>
-                <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
-                  <Trash2 size={16}/>
-                </button>
-              </td>
-            </tr>
-          ))}
+          {items.map(item => {
+            const assigned = asignaciones.filter(a => a.docenteId === item.id).reduce((sum, a) => sum + (a.horas || 0), 0);
+            const contract = Number(item.horasContratadas || 0);
+            const diff = contract - assigned;
+            
+            let statusBadge = 'badge-neutral';
+            let statusText = 'Sin Contrato';
+            if (contract > 0) {
+              if (diff === 0) { statusBadge = 'badge-success'; statusText = 'Completo'; }
+              else if (diff > 0) { statusBadge = 'badge-warning'; statusText = `Faltan ${diff}h`; }
+              else { statusBadge = 'badge-error'; statusText = `Sobregiro (${Math.abs(diff)}h)`; }
+            }
+
+            return (
+              <tr key={item.id}>
+                <td style={{ fontWeight: 500 }}>{item.nombre}</td>
+                <td>{contract > 0 ? `${contract} hrs` : '-'}</td>
+                <td>{assigned} hrs</td>
+                <td><span className={`badge ${statusBadge}`}>{statusText}</span></td>
+                <td style={{ textAlign: 'center' }}>
+                  <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
+                    <Trash2 size={16}/>
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
           {items.length === 0 && (
-            <tr><td colSpan="2" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>No hay docentes registrados.</td></tr>
+            <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>No hay docentes registrados.</td></tr>
           )}
         </tbody>
       </table>
