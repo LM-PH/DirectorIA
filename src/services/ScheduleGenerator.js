@@ -136,6 +136,20 @@ export class ScheduleGenerator {
       // Handle "Taller / Multigrupo" (no grupoId) by attempting to block all groups
       const targetGrupos = clase.grupoId ? [this.grupos.find(g => g.id === clase.grupoId)].filter(Boolean) : this.grupos;
 
+      // Protecciones contra datos eliminados o huérfanos
+      if (targetGrupos.length === 0) {
+        this.conflictos.push({ mensaje: `Asignación ignorada: el grupo asignado ya no existe.` });
+        return;
+      }
+      if (!this.disponibilidadDocente[clase.docenteId]) {
+        this.conflictos.push({ mensaje: `Asignación ignorada: el docente asignado ya no existe.` });
+        return;
+      }
+      if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId]) {
+        this.conflictos.push({ mensaje: `Asignación ignorada: el espacio asignado ya no existe.` });
+        return;
+      }
+
       for (let d = 0; d < dias && !asignada; d++) {
         for (let m = 0; m < modulos && !asignada; m++) {
           
@@ -164,8 +178,10 @@ export class ScheduleGenerator {
       }
 
       if (!asignada) {
+        const docName = this.docentes.find(doc => doc.id === clase.docenteId)?.nombre || 'Desconocido';
+        const matName = this.materias.find(m => m.id === clase.materiaId)?.nombre || 'Materia';
         this.conflictos.push({
-          mensaje: `No se encontró espacio para la clase de ${this.docentes.find(doc => doc.id === clase.docenteId)?.nombre} (Materia asignada a ${clase.grupoId ? 'un grupo' : 'talleres'})`
+          mensaje: `Imposible acomodar ${matName} de ${docName}. Horario saturado o conflicto de maestro/grupo/espacio.`
         });
       }
     });
@@ -189,7 +205,7 @@ export class ScheduleGenerator {
           if (this.horario[gId][d][m]) {
             res.push({
               grupoId: gId,
-              dia: parseInt(d),
+              dia: this.config.diasLaborables[parseInt(d)], // MAP TO ACTUAL DAY
               modulo: parseInt(m),
               ...this.horario[gId][d][m]
             });
