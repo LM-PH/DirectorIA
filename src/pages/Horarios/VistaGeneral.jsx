@@ -12,7 +12,9 @@ const VistaGeneral = () => {
   const [docentes, setDocentes] = useState([]);
   const [materias, setMaterias] = useState([]);
   const [horarioDb, setHorarioDb] = useState(null);
+  const [viewMode, setViewMode] = useState('grupo'); // 'grupo' | 'docente'
   const [selectedGrupo, setSelectedGrupo] = useState(null);
+  const [selectedDocente, setSelectedDocente] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,7 +51,10 @@ const VistaGeneral = () => {
     if (grupos.length > 0 && !selectedGrupo) {
       setSelectedGrupo(grupos[0].id);
     }
-  }, [grupos, selectedGrupo]);
+    if (docentes.length > 0 && !selectedDocente) {
+      setSelectedDocente(docentes[0].id);
+    }
+  }, [grupos, docentes, selectedGrupo, selectedDocente]);
 
   if (!dataReady) {
     return (
@@ -91,17 +96,44 @@ const VistaGeneral = () => {
 
       <div className="schedule-view-controls">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Seleccionar Grupo:</span>
-          <select 
-            className="form-group" 
-            style={{ marginBottom: 0, minWidth: '200px' }}
-            value={selectedGrupo || ''}
-            onChange={(e) => setSelectedGrupo(e.target.value)}
-          >
-            {grupos.map(g => (
-              <option key={g.id} value={g.id}>{g.grado}° {g.grupo} - {g.turno}</option>
-            ))}
-          </select>
+          <div className="view-toggle" style={{ display: 'flex', background: '#e2e8f0', borderRadius: '8px', padding: '4px' }}>
+            <button 
+              onClick={() => setViewMode('grupo')}
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: 'none', background: viewMode === 'grupo' ? '#fff' : 'transparent', boxShadow: viewMode === 'grupo' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', fontWeight: viewMode === 'grupo' ? 600 : 400, color: viewMode === 'grupo' ? 'var(--color-primary)' : '#64748b' }}
+            >Por Grupo</button>
+            <button 
+              onClick={() => setViewMode('docente')}
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: 'none', background: viewMode === 'docente' ? '#fff' : 'transparent', boxShadow: viewMode === 'docente' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', fontWeight: viewMode === 'docente' ? 600 : 400, color: viewMode === 'docente' ? 'var(--color-primary)' : '#64748b' }}
+            >Por Profesor</button>
+          </div>
+
+          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            {viewMode === 'grupo' ? 'Seleccionar Grupo:' : 'Seleccionar Profesor:'}
+          </span>
+          
+          {viewMode === 'grupo' ? (
+            <select 
+              className="form-group" 
+              style={{ marginBottom: 0, minWidth: '200px' }}
+              value={selectedGrupo || ''}
+              onChange={(e) => setSelectedGrupo(e.target.value)}
+            >
+              {grupos.map(g => (
+                <option key={g.id} value={g.id}>{g.grado}° {g.grupo} - {g.turno}</option>
+              ))}
+            </select>
+          ) : (
+            <select 
+              className="form-group" 
+              style={{ marginBottom: 0, minWidth: '200px' }}
+              value={selectedDocente || ''}
+              onChange={(e) => setSelectedDocente(e.target.value)}
+            >
+              {[...docentes].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(d => (
+                <option key={d.id} value={d.id}>{d.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
         
         {horarioDb.puntuacion && (
@@ -140,9 +172,13 @@ const VistaGeneral = () => {
                       Módulo {mIdx + 1}
                     </td>
                     {diasLaborables.map(dia => {
-                      // Buscar asignación para este grupo, día y módulo
+                      // Buscar asignación robusta usando Number()
                       const slot = Array.isArray(horarioDb.horario) 
-                        ? horarioDb.horario.find(h => h.grupoId === selectedGrupo && h.dia === dia && h.modulo === mIdx)
+                        ? horarioDb.horario.find(h => 
+                            Number(h.dia) === Number(dia) && 
+                            Number(h.modulo) === Number(mIdx) && 
+                            (viewMode === 'grupo' ? h.grupoId === selectedGrupo : h.docenteId === selectedDocente)
+                          )
                         : null;
 
                       return (
@@ -150,7 +186,11 @@ const VistaGeneral = () => {
                           {slot ? (
                             <div className="timetable-class-card" style={{ height: '100%' }}>
                               <div className="class-card-subject">{getMateriaName(slot.materiaId)}</div>
-                              <div className="class-card-teacher">{getDocenteName(slot.docenteId)}</div>
+                              <div className="schedule-teacher">
+                                {viewMode === 'grupo' 
+                                  ? getDocenteName(slot.docenteId) 
+                                  : (slot.grupoId ? `${grupos.find(g=>g.id===slot.grupoId)?.grado}° ${grupos.find(g=>g.id===slot.grupoId)?.grupo}` : 'Taller (Multigrupo)')}
+                              </div>
                             </div>
                           ) : (
                             <div style={{ height: '100%', minHeight: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '0.8rem' }}>
