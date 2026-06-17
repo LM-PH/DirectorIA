@@ -3,12 +3,13 @@
  */
 
 export class ScheduleGenerator {
-  constructor(config, docentes, grupos, materias, espacios) {
+  constructor(config, docentes, grupos, materias, espacios, asignaciones = []) {
     this.config = config;
     this.docentes = docentes;
     this.grupos = grupos;
     this.materias = materias;
     this.espacios = espacios;
+    this.asignaciones = asignaciones;
     
     // Matriz principal: { [grupoId]: { [dia]: { [modulo]: Asignacion } } }
     this.horario = {};
@@ -81,13 +82,20 @@ export class ScheduleGenerator {
   }
 
   prepararClases() {
-    // A partir de los grupos y materias, crear objetos individuales de clase por cada hora
-    // Esto dependerá de cómo se vinculan los docentes con los grupos y materias.
-    // Para simplificar, suponemos que las materias ya vienen con horas semanales.
     const clases = [];
-    
-    // Aquí se leerían las asignaciones hechas previamente por el usuario (Materia -> Grupo -> Docente -> Horas)
-    // Supondremos un array dummy para el esqueleto.
+    this.asignaciones.forEach(asig => {
+      const horas = asig.horas || 1;
+      for (let i = 0; i < horas; i++) {
+        clases.push({
+          id: `${asig.id}_${i}`,
+          docenteId: asig.docenteId,
+          materiaId: asig.materiaId,
+          grupoId: asig.grupoId,
+          espacioId: asig.espacioId,
+          asignacionOriginal: asig
+        });
+      }
+    });
     return clases;
   }
 
@@ -109,8 +117,49 @@ export class ScheduleGenerator {
     // Materias especiales o con docentes con restricciones fuertes
   }
 
-  paso6_colocarNormales() {
-    // Materias restantes. Buscar el primer hueco disponible iterando dias y módulos.
+  paso6_colocarNormales(clasesPorAsignar) {
+    const dias = this.config.diasLaborables.length;
+    const modulos = this.config.modulosPorDia;
+
+    clasesPorAsignar.forEach(clase => {
+      let asignada = false;
+
+      // Handle "Taller / Multigrupo" (no grupoId) by attempting to block all groups
+      const targetGrupos = clase.grupoId ? [this.grupos.find(g => g.id === clase.grupoId)].filter(Boolean) : this.grupos;
+
+      for (let d = 0; d < dias && !asignada; d++) {
+        for (let m = 0; m < modulos && !asignada; m++) {
+          
+          if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
+          if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
+          
+          const gruposLibres = targetGrupos.every(g => this.horario[g.id][d][m] === null);
+          if (!gruposLibres) continue;
+
+          this.disponibilidadDocente[clase.docenteId][d][m] = false;
+          if (clase.espacioId) {
+            this.disponibilidadEspacio[clase.espacioId][d][m] = false;
+          }
+
+          targetGrupos.forEach(g => {
+            this.horario[g.id][d][m] = {
+              docenteId: clase.docenteId,
+              materiaId: clase.materiaId,
+              espacioId: clase.espacioId,
+              isTaller: !clase.grupoId
+            };
+          });
+
+          asignada = true;
+        }
+      }
+
+      if (!asignada) {
+        this.conflictos.push({
+          mensaje: `No se encontró espacio para la clase de ${this.docentes.find(doc => doc.id === clase.docenteId)?.nombre} (Materia asignada a ${clase.grupoId ? 'un grupo' : 'talleres'})`
+        });
+      }
+    });
   }
 
   paso7_optimizarHuecos() {
@@ -118,14 +167,8 @@ export class ScheduleGenerator {
   }
 
   paso8_calcularCalidad() {
-    let score = 0;
-    // Ejemplo:
-    // +10 preferencia docente cumplida.
-    // +8 reducción de huecos.
-    // +5 distribución equilibrada.
-    // -5 por hueco.
-    // -10 por restricción preferente incumplida.
-    // -100 por conflicto obligatorio.
+    let score = 100 - (this.conflictos.length * 15);
+    if (score < 0) score = 0;
     this.puntuacion = score;
   }
 

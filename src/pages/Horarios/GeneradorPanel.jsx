@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Play, AlertTriangle, CheckCircle, Save, Cpu, Zap, BarChart2, ShieldCheck, ServerCrash } from 'lucide-react';
-import { getConfig, getDocentes, getGrupos, getMaterias, getEspacios, saveHorarioGenerado } from '../../services/horariosData';
+import { getConfig, getDocentes, getGrupos, getMaterias, getEspacios, getAsignaciones, saveHorarioGenerado } from '../../services/horariosData';
 import { useAuth } from '../../contexts/AuthContext';
 import { ScheduleGenerator } from '../../services/ScheduleGenerator';
 import { ScheduleValidator } from '../../services/ScheduleValidator';
@@ -18,6 +18,7 @@ const GeneradorPanel = () => {
   const [grupos, setGrupos] = useState([]);
   const [materias, setMaterias] = useState([]);
   const [espacios, setEspacios] = useState([]);
+  const [asignaciones, setAsignaciones] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,6 +28,7 @@ const GeneradorPanel = () => {
       setGrupos(await getGrupos(schoolId));
       setMaterias(await getMaterias(schoolId));
       setEspacios(await getEspacios(schoolId));
+      setAsignaciones(await getAsignaciones(schoolId));
       setDataReady(true);
     };
     fetchData();
@@ -41,13 +43,13 @@ const GeneradorPanel = () => {
     setProgreso(40);
 
     try {
-      const generator = new ScheduleGenerator(config, docentes, grupos, materias, espacios);
+      const generator = new ScheduleGenerator(config, docentes, grupos, materias, espacios, asignaciones);
       const output = generator.generar();
       
       setProgreso(75);
       await new Promise(r => setTimeout(r, 600)); // Validación
 
-      const validator = new ScheduleValidator(config, output.horario, docentes, grupos, espacios);
+      const validator = new ScheduleValidator(config, output.horario, docentes, grupos, espacios, asignaciones);
       const validacion = validator.validar();
 
       setProgreso(100);
