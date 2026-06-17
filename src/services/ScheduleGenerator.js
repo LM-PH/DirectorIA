@@ -138,6 +138,15 @@ export class ScheduleGenerator {
     clasesPorAsignar.forEach(clase => {
       let asignada = false;
 
+      if (!this.disponibilidadDocente[clase.docenteId]) {
+        this.conflictos.push({ mensaje: `Asignación ignorada: el docente asignado ya no existe.` });
+        return;
+      }
+      if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId]) {
+        this.conflictos.push({ mensaje: `Asignación ignorada: el espacio asignado ya no existe.` });
+        return;
+      }
+
       if (!clase.grupoId) {
         // TALLER
         for (let d = 0; d < dias && !asignada; d++) {
