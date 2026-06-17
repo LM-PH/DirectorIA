@@ -423,7 +423,9 @@ const AsignacionesTab = ({ schoolId }) => {
       getGrupos(schoolId),
       getEspacios(schoolId)
     ]);
-    setItems(a); setDocentes(d); setMaterias(m); setGrupos(g); setEspacios(e);
+    setItems(a); 
+    setDocentes(d.sort((a,b) => a.nombre.localeCompare(b.nombre))); 
+    setMaterias(m); setGrupos(g); setEspacios(e);
   };
 
   useEffect(() => { load() }, [schoolId]);
@@ -431,6 +433,20 @@ const AsignacionesTab = ({ schoolId }) => {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!form.docenteId || !form.materiaId) return;
+
+    // Check for duplicates
+    const duplicate = items.find(a => 
+      a.docenteId === form.docenteId && 
+      a.materiaId === form.materiaId && 
+      a.grupoId === form.grupoId &&
+      a.id !== editingId
+    );
+
+    if (duplicate) {
+      alert("Error: Esta asignación ya existe en la matriz.");
+      return;
+    }
+
     if (editingId) {
       await updateAsignacion(schoolId, editingId, form);
       setEditingId(null);
@@ -530,7 +546,7 @@ const AsignacionesTab = ({ schoolId }) => {
           </tr>
         </thead>
         <tbody>
-          {items.map(item => (
+          {[...items].sort((a, b) => getName(docentes, a.docenteId).localeCompare(getName(docentes, b.docenteId))).map(item => (
             <tr key={item.id}>
               <td style={{ fontWeight: 500 }}>{getName(docentes, item.docenteId)}</td>
               <td>{getName(materias, item.materiaId)}</td>
