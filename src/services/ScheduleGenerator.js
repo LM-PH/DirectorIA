@@ -18,6 +18,9 @@ export class ScheduleGenerator {
     // Control de espacios: { [espacioId]: { [dia]: { [modulo]: boolean } } }
     this.disponibilidadEspacio = {};
     
+    // Matriz de talleres: { [dia]: { [modulo]: Array<Taller> } }
+    this.horarioTalleres = {};
+    
     this.conflictos = [];
     this.puntuacion = 0;
   }
@@ -53,8 +56,10 @@ export class ScheduleGenerator {
       this.horario[g.id] = {};
       for (let d = 0; d < dias; d++) {
         this.horario[g.id][d] = {};
+        if (!this.horarioTalleres[d]) this.horarioTalleres[d] = {};
         for (let m = 0; m < modulos; m++) {
           this.horario[g.id][d][m] = null;
+          this.horarioTalleres[d][m] = [];
         }
       }
     });
@@ -133,47 +138,51 @@ export class ScheduleGenerator {
     clasesPorAsignar.forEach(clase => {
       let asignada = false;
 
-      // Handle "Taller / Multigrupo" (no grupoId) by attempting to block all groups
-      const targetGrupos = clase.grupoId ? [this.grupos.find(g => g.id === clase.grupoId)].filter(Boolean) : this.grupos;
-
-      // Protecciones contra datos eliminados o huérfanos
-      if (targetGrupos.length === 0) {
-        this.conflictos.push({ mensaje: `Asignación ignorada: el grupo asignado ya no existe.` });
-        return;
-      }
-      if (!this.disponibilidadDocente[clase.docenteId]) {
-        this.conflictos.push({ mensaje: `Asignación ignorada: el docente asignado ya no existe.` });
-        return;
-      }
-      if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId]) {
-        this.conflictos.push({ mensaje: `Asignación ignorada: el espacio asignado ya no existe.` });
-        return;
-      }
-
-      for (let d = 0; d < dias && !asignada; d++) {
-        for (let m = 0; m < modulos && !asignada; m++) {
-          
-          if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
-          if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
-          
-          const gruposLibres = targetGrupos.every(g => this.horario[g.id][d][m] === null);
-          if (!gruposLibres) continue;
-
-          this.disponibilidadDocente[clase.docenteId][d][m] = false;
-          if (clase.espacioId) {
-            this.disponibilidadEspacio[clase.espacioId][d][m] = false;
-          }
-
-          targetGrupos.forEach(g => {
-            this.horario[g.id][d][m] = {
+      if (!clase.grupoId) {
+        // TALLER
+        for (let d = 0; d < dias && !asignada; d++) {
+          for (let m = 0; m < modulos && !asignada; m++) {
+            if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
+            if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
+            
+            const gruposTienenClaseNormal = this.grupos.some(g => this.horario[g.id][d][m] !== null);
+            if (gruposTienenClaseNormal) continue;
+            
+            this.disponibilidadDocente[clase.docenteId][d][m] = false;
+            if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
+            
+            this.horarioTalleres[d][m].push({
               docenteId: clase.docenteId,
               materiaId: clase.materiaId,
               espacioId: clase.espacioId,
-              isTaller: !clase.grupoId
-            };
-          });
+              isTaller: true
+            });
+            asignada = true;
+          }
+        }
+      } else {
+        // NORMAL
+        const targetGrupos = [this.grupos.find(g => g.id === clase.grupoId)].filter(Boolean);
+        if (targetGrupos.length === 0) return;
 
-          asignada = true;
+        for (let d = 0; d < dias && !asignada; d++) {
+          for (let m = 0; m < modulos && !asignada; m++) {
+            if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
+            if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
+            if (this.horario[clase.grupoId][d][m] !== null) continue;
+            if (this.horarioTalleres[d][m].length > 0) continue; // Un grupo no puede tomar clase normal si hay taller general
+
+            this.disponibilidadDocente[clase.docenteId][d][m] = false;
+            if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
+
+            this.horario[clase.grupoId][d][m] = {
+              docenteId: clase.docenteId,
+              materiaId: clase.materiaId,
+              espacioId: clase.espacioId,
+              isTaller: false
+            };
+            asignada = true;
+          }
         }
       }
 
@@ -213,6 +222,20 @@ export class ScheduleGenerator {
         });
       });
     });
+
+    Object.keys(this.horarioTalleres).forEach(d => {
+      Object.keys(this.horarioTalleres[d]).forEach(m => {
+        this.horarioTalleres[d][m].forEach(taller => {
+          res.push({
+            grupoId: null,
+            dia: this.config.diasLaborables[parseInt(d)],
+            modulo: parseInt(m),
+            ...taller
+          });
+        });
+      });
+    });
+
     return res;
   }
 

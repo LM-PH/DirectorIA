@@ -173,24 +173,28 @@ const VistaGeneral = () => {
                     </td>
                     {diasLaborables.map(dia => {
                       // Buscar asignación robusta usando Number()
-                      const slot = Array.isArray(horarioDb.horario) 
-                        ? horarioDb.horario.find(h => 
+                      const slots = Array.isArray(horarioDb.horario) 
+                        ? horarioDb.horario.filter(h => 
                             Number(h.dia) === Number(dia) && 
                             Number(h.modulo) === Number(mIdx) && 
-                            (viewMode === 'grupo' ? h.grupoId === selectedGrupo : h.docenteId === selectedDocente)
+                            (viewMode === 'grupo' ? (h.grupoId === selectedGrupo || (!h.grupoId && h.isTaller)) : h.docenteId === selectedDocente)
                           )
-                        : null;
+                        : [];
 
                       return (
                         <td key={`${dia}-${mIdx}`}>
-                          {slot ? (
-                            <div className="timetable-class-card" style={{ height: '100%' }}>
-                              <div className="class-card-subject">{getMateriaName(slot.materiaId)}</div>
-                              <div className="schedule-teacher">
-                                {viewMode === 'grupo' 
-                                  ? getDocenteName(slot.docenteId) 
-                                  : (slot.grupoId ? `${grupos.find(g=>g.id===slot.grupoId)?.grado}° ${grupos.find(g=>g.id===slot.grupoId)?.grupo}` : 'Taller (Multigrupo)')}
-                              </div>
+                          {slots.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', height: '100%' }}>
+                              {slots.map((slot, i) => (
+                                <div key={i} className="timetable-class-card" style={{ height: '100%', minHeight: '60px', borderLeftColor: slot.isTaller ? '#22c55e' : 'var(--color-primary)' }}>
+                                  <div className="class-card-subject" style={{ color: slot.isTaller ? '#166534' : 'inherit' }}>{getMateriaName(slot.materiaId)}</div>
+                                  <div className="schedule-teacher">
+                                    {viewMode === 'grupo' 
+                                      ? getDocenteName(slot.docenteId) 
+                                      : (slot.grupoId ? `${grupos.find(g=>g.id===slot.grupoId)?.grado}° ${grupos.find(g=>g.id===slot.grupoId)?.grupo}` : 'Taller General')}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           ) : (
                             <div style={{ height: '100%', minHeight: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '0.8rem' }}>
