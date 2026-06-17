@@ -24,7 +24,9 @@ export class ScheduleValidator {
       if (clase.docenteId) {
         if (!controlDocente[clase.docenteId]) controlDocente[clase.docenteId] = {};
         if (controlDocente[clase.docenteId][key]) {
-          conflictos.push({ tipo: 'docente_duplicado', mensaje: `El docente ${clase.docenteId} está asignado a más de un grupo el día ${clase.dia} módulo ${clase.modulo}`, clase });
+          if (!(clase.isTaller && controlDocente[clase.docenteId][key].isTaller && controlDocente[clase.docenteId][key].materiaId === clase.materiaId)) {
+            conflictos.push({ tipo: 'docente_duplicado', mensaje: `Un docente está asignado a más de un grupo distinto el día ${clase.dia+1} módulo ${clase.modulo+1}`, clase });
+          }
         } else {
           controlDocente[clase.docenteId][key] = clase;
         }
@@ -34,7 +36,7 @@ export class ScheduleValidator {
       if (clase.grupoId) {
         if (!controlGrupo[clase.grupoId]) controlGrupo[clase.grupoId] = {};
         if (controlGrupo[clase.grupoId][key]) {
-          conflictos.push({ tipo: 'grupo_duplicado', mensaje: `El grupo ${clase.grupoId} tiene más de una materia asignada el día ${clase.dia} módulo ${clase.modulo}`, clase });
+          conflictos.push({ tipo: 'grupo_duplicado', mensaje: `Un grupo tiene más de una materia asignada el día ${clase.dia+1} módulo ${clase.modulo+1}`, clase });
         } else {
           controlGrupo[clase.grupoId][key] = clase;
         }
@@ -44,7 +46,9 @@ export class ScheduleValidator {
       if (clase.espacioId) {
         if (!controlEspacio[clase.espacioId]) controlEspacio[clase.espacioId] = {};
         if (controlEspacio[clase.espacioId][key]) {
-          conflictos.push({ tipo: 'espacio_duplicado', mensaje: `El espacio ${clase.espacioId} está ocupado el día ${clase.dia} módulo ${clase.modulo}`, clase });
+          if (!(clase.isTaller && controlEspacio[clase.espacioId][key].isTaller && controlEspacio[clase.espacioId][key].materiaId === clase.materiaId)) {
+            conflictos.push({ tipo: 'espacio_duplicado', mensaje: `Un espacio está ocupado por múltiples clases el día ${clase.dia+1} módulo ${clase.modulo+1}`, clase });
+          }
         } else {
           controlEspacio[clase.espacioId][key] = clase;
         }
