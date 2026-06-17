@@ -96,6 +96,15 @@ export class ScheduleGenerator {
         });
       }
     });
+    
+    // Sort so that Talleres (no grupoId) are scheduled FIRST
+    // Otherwise they will never find a slot where ALL groups are free
+    clases.sort((a, b) => {
+      if (!a.grupoId && b.grupoId) return -1;
+      if (a.grupoId && !b.grupoId) return 1;
+      return 0;
+    });
+    
     return clases;
   }
 
