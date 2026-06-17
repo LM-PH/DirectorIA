@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDocentes, getGrupos, getMaterias, getEspacios, getAsignaciones, createDocente, createGrupo, createMateria, createEspacio, createAsignacion, updateAsignacion, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio, deleteAsignacion } from '../../services/horariosData';
+import { getDocentes, getGrupos, getMaterias, getEspacios, getAsignaciones, createDocente, createGrupo, createMateria, createEspacio, createAsignacion, updateAsignacion, updateDocente, deleteDocente, deleteGrupo, deleteMateria, deleteEspacio, deleteAsignacion } from '../../services/horariosData';
 import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Trash2, Edit2, Users, BookOpen, MapPin, Grid, Layers } from 'lucide-react';
 import './Horarios.css';
@@ -51,6 +51,7 @@ const DocentesTab = ({ schoolId }) => {
   const [asignaciones, setAsignaciones] = useState([]);
   const [nombre, setNombre] = useState('');
   const [horasContratadas, setHorasContratadas] = useState(20);
+  const [editingId, setEditingId] = useState(null);
   
   const load = async () => {
     const [docs, asigs] = await Promise.all([getDocentes(schoolId), getAsignaciones(schoolId)]);
@@ -62,10 +63,23 @@ const DocentesTab = ({ schoolId }) => {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!nombre) return;
-    await createDocente(schoolId, { nombre, horasContratadas: Number(horasContratadas), prioridad: 'Media', restricciones: { noPrimeras: false, noUltimas: false } });
+    
+    if (editingId) {
+      await updateDocente(schoolId, editingId, { nombre, horasContratadas: Number(horasContratadas) });
+      setEditingId(null);
+    } else {
+      await createDocente(schoolId, { nombre, horasContratadas: Number(horasContratadas), prioridad: 'Media', restricciones: { noPrimeras: false, noUltimas: false } });
+    }
+    
     setNombre('');
     setHorasContratadas(20);
     load();
+  };
+
+  const handleEdit = (item) => {
+    setNombre(item.nombre || '');
+    setHorasContratadas(item.horasContratadas || 20);
+    setEditingId(item.id);
   };
 
   const handleDel = async (id) => {
@@ -92,8 +106,17 @@ const DocentesTab = ({ schoolId }) => {
           <input type="number" value={horasContratadas} onChange={e=>setHorasContratadas(e.target.value)} min="1" max="60" required/>
         </div>
         <button type="submit" className="btn-primary" style={{ marginBottom: 0 }}>
-          <Plus size={18}/> Agregar
+          {editingId ? <Edit2 size={18}/> : <Plus size={18}/>} {editingId ? 'Guardar' : 'Agregar'}
         </button>
+        {editingId && (
+          <button type="button" className="btn-secondary" style={{ marginBottom: 0 }} onClick={() => {
+            setEditingId(null);
+            setNombre('');
+            setHorasContratadas(20);
+          }}>
+            Cancelar
+          </button>
+        )}
       </form>
 
       <table className="table-modern">
@@ -126,7 +149,10 @@ const DocentesTab = ({ schoolId }) => {
                 <td>{contract > 0 ? `${contract} hrs` : '-'}</td>
                 <td>{assigned} hrs</td>
                 <td><span className={`badge ${statusBadge}`}>{statusText}</span></td>
-                <td style={{ textAlign: 'center' }}>
+                <td style={{ textAlign: 'center', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <button onClick={() => handleEdit(item)} className="btn-secondary" style={{ padding: '0.4rem', background: '#e2e8f0', color: '#475569', border: 'none' }}>
+                    <Edit2 size={16}/>
+                  </button>
                   <button onClick={() => handleDel(item.id)} className="btn-danger" style={{ padding: '0.4rem' }}>
                     <Trash2 size={16}/>
                   </button>
