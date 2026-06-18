@@ -26,11 +26,9 @@ export class ScheduleGenerator {
   }
 
   generar() {
+    this.paso0_validarVolumen();
     this.paso1_crearMatrizVacia();
-    // En una implementación real más compleja con miles de variables,
-    // se preparan las listas de clases a asignar basadas en las materias de cada grupo y horas semanales.
     
-    // Generar la lista de clases a asignar
     let clasesPorAsignar = this.prepararClases();
 
     this.paso2_colocarBloquesFijos(clasesPorAsignar);
@@ -46,6 +44,39 @@ export class ScheduleGenerator {
       conflictos: this.conflictos,
       puntuacion: this.puntuacion
     };
+  }
+
+  paso0_validarVolumen() {
+    const dias = this.config.diasLaborables?.length || 5;
+    const modulos = this.config.modulosPorDia || 7;
+    const totalSlots = dias * modulos;
+    
+    this.docenteLoad = {};
+    this.grupoLoad = {};
+    
+    this.asignaciones.forEach(a => {
+      const h = a.horas || 1;
+      if (a.grupoId) this.grupoLoad[a.grupoId] = (this.grupoLoad[a.grupoId] || 0) + h;
+      if (a.docenteId) this.docenteLoad[a.docenteId] = (this.docenteLoad[a.docenteId] || 0) + h;
+    });
+
+    for (const [gId, horas] of Object.entries(this.grupoLoad)) {
+      if (horas > totalSlots) {
+        const gName = this.grupos.find(g => g.id === gId)?.grado ? `${this.grupos.find(g => g.id === gId).grado}° ${this.grupos.find(g => g.id === gId).grupo}` : gId;
+        this.conflictos.push({
+          mensaje: `⚠️ EL GRUPO ${gName} TIENE ${horas} HORAS ASIGNADAS, PERO LA SEMANA SÓLO TIENE ${totalSlots} ESPACIOS.`
+        });
+      }
+    }
+
+    for (const [dId, horas] of Object.entries(this.docenteLoad)) {
+      if (horas > totalSlots) {
+        const dName = this.docentes.find(d => d.id === dId)?.nombre || dId;
+        this.conflictos.push({
+          mensaje: `⚠️ EL DOCENTE ${dName} TIENE ${horas} HORAS ASIGNADAS EN TOTAL, SUPERANDO LOS ${totalSlots} ESPACIOS DE LA SEMANA.`
+        });
+      }
+    }
   }
 
   paso1_crearMatrizVacia() {
@@ -109,7 +140,10 @@ export class ScheduleGenerator {
     clases.sort((a, b) => {
       if (!a.grupoId && b.grupoId) return -1;
       if (a.grupoId && !b.grupoId) return 1;
-      return 0;
+      
+      const loadA = this.docenteLoad[a.docenteId] || 0;
+      const loadB = this.docenteLoad[b.docenteId] || 0;
+      return loadB - loadA; // Mayor carga primero
     });
     
     return clases;
