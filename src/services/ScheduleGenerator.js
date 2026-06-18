@@ -35,6 +35,7 @@ export class ScheduleGenerator {
     let mejorDisponibilidadEspacio = null;
     let mejorPuntuacion = -1;
     let menoresConflictos = null;
+    let mejoresSinAsignar = null;
 
     const maxIntentos = 100; // Monte Carlo iterations
     const clasesBase = this.prepararClases();
@@ -42,6 +43,7 @@ export class ScheduleGenerator {
     for (let intento = 0; intento < maxIntentos; intento++) {
       this.paso1_crearMatrizVacia();
       this.conflictos = [...warningsBase]; // Restaurar advertencias físicas
+      this.clasesSinAsignarTemp = [];
       
       let clasesPorAsignar = clasesBase.map(c => ({...c})); // Clon superficial
 
@@ -81,6 +83,7 @@ export class ScheduleGenerator {
         mejorHorario = JSON.parse(JSON.stringify(this.horario));
         mejorTalleres = JSON.parse(JSON.stringify(this.horarioTalleres));
         menoresConflictos = [...this.conflictos];
+        mejoresSinAsignar = [...this.clasesSinAsignarTemp];
       }
 
       // Si no hay conflictos de acomodo, es un horario perfecto
@@ -91,11 +94,13 @@ export class ScheduleGenerator {
     this.horario = mejorHorario;
     this.horarioTalleres = mejorTalleres;
     this.conflictos = menoresConflictos;
+    this.clasesSinAsignar = mejoresSinAsignar || [];
     this.puntuacion = mejorPuntuacion;
 
     return {
       horario: this.flattenHorario(),
       conflictos: this.conflictos,
+      clasesSinAsignar: this.clasesSinAsignar,
       puntuacion: this.puntuacion
     };
   }
@@ -303,6 +308,9 @@ export class ScheduleGenerator {
         this.conflictos.push({
           mensaje: `Imposible acomodar ${matName} de ${docName}. Horario saturado o conflicto de maestro/grupo/espacio.`
         });
+        if (this.clasesSinAsignarTemp) {
+          this.clasesSinAsignarTemp.push(clase);
+        }
       }
     });
   }

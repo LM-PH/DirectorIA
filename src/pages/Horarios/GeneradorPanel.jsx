@@ -74,6 +74,7 @@ const GeneradorPanel = () => {
         fecha: new Date().toISOString(),
         puntuacion: resultado.puntuacion,
         horario: resultado.horario,
+        clasesSinAsignar: resultado.clasesSinAsignar || [],
         esValido: resultado.esValido
       });
       alert('¡Horario guardado en la base de datos con éxito!');
