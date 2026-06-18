@@ -88,6 +88,7 @@ export class ScheduleGenerator {
 
   prepararClases() {
     const clases = [];
+    const dias = this.config.diasLaborables.length || 5;
     this.asignaciones.forEach(asig => {
       const horas = asig.horas || 1;
       for (let i = 0; i < horas; i++) {
@@ -97,7 +98,8 @@ export class ScheduleGenerator {
           materiaId: asig.materiaId,
           grupoId: asig.grupoId,
           espacioId: asig.espacioId,
-          asignacionOriginal: asig
+          asignacionOriginal: asig,
+          diaPreferido: i % dias
         });
       }
     });
@@ -149,7 +151,9 @@ export class ScheduleGenerator {
 
       if (!clase.grupoId) {
         // TALLER
-        for (let d = 0; d < dias && !asignada; d++) {
+        let startD = clase.diaPreferido || 0;
+        for (let offset = 0; offset < dias && !asignada; offset++) {
+          let d = (startD + offset) % dias;
           for (let m = 0; m < modulos && !asignada; m++) {
             if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
             if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
@@ -174,7 +178,9 @@ export class ScheduleGenerator {
         const targetGrupos = [this.grupos.find(g => g.id === clase.grupoId)].filter(Boolean);
         if (targetGrupos.length === 0) return;
 
-        for (let d = 0; d < dias && !asignada; d++) {
+        let startD = clase.diaPreferido || 0;
+        for (let offset = 0; offset < dias && !asignada; offset++) {
+          let d = (startD + offset) % dias;
           for (let m = 0; m < modulos && !asignada; m++) {
             if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
             if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
@@ -193,6 +199,11 @@ export class ScheduleGenerator {
             asignada = true;
           }
         }
+        
+        // Si no se asignó por fragmentación, intentar un SWAP de 1 nivel
+        if (!asignada) {
+          asignada = this.intentarAcomodarConSwap(clase, dias, modulos);
+        }
       }
 
       if (!asignada) {
@@ -203,6 +214,69 @@ export class ScheduleGenerator {
         });
       }
     });
+  }
+
+  intentarAcomodarConSwap(clase, dias, modulos) {
+    if (!clase.grupoId) return false;
+    
+    for (let d = 0; d < dias; d++) {
+      for (let m = 0; m < modulos; m++) {
+        // Buscamos un slot libre para el grupo y espacio, pero docente ocupado
+        if (this.horario[clase.grupoId][d][m] !== null) continue;
+        if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
+        if (this.horarioTalleres[d][m].length > 0) continue;
+        
+        if (!this.disponibilidadDocente[clase.docenteId][d][m]) {
+          // Identificar qué clase está dando el docente
+          let claseOcupante = null;
+          let grupoOcupanteId = null;
+          for (const g of this.grupos) {
+            const c = this.horario[g.id][d][m];
+            if (c && c.docenteId === clase.docenteId && !c.isTaller) {
+              claseOcupante = c;
+              grupoOcupanteId = g.id;
+              break;
+            }
+          }
+          
+          if (claseOcupante) {
+            // Intentar reubicar a claseOcupante
+            for (let d2 = 0; d2 < dias; d2++) {
+              for (let m2 = 0; m2 < modulos; m2++) {
+                if (d2 === d && m2 === m) continue;
+                
+                if (this.horario[grupoOcupanteId][d2][m2] === null &&
+                    this.disponibilidadDocente[clase.docenteId][d2][m2] &&
+                    (!claseOcupante.espacioId || this.disponibilidadEspacio[claseOcupante.espacioId][d2][m2]) &&
+                    this.horarioTalleres[d2][m2].length === 0) 
+                {
+                  // Mover ocupante
+                  this.horario[grupoOcupanteId][d2][m2] = claseOcupante;
+                  this.disponibilidadDocente[clase.docenteId][d2][m2] = false;
+                  if (claseOcupante.espacioId) this.disponibilidadEspacio[claseOcupante.espacioId][d2][m2] = false;
+                  
+                  // Liberar anterior
+                  this.horario[grupoOcupanteId][d][m] = null;
+                  if (claseOcupante.espacioId) this.disponibilidadEspacio[claseOcupante.espacioId][d][m] = true;
+                  
+                  // Acomodar nuestra clase
+                  this.horario[clase.grupoId][d][m] = {
+                    docenteId: clase.docenteId,
+                    materiaId: clase.materiaId,
+                    espacioId: clase.espacioId,
+                    isTaller: false
+                  };
+                  if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
+                  
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   paso7_optimizarHuecos() {
