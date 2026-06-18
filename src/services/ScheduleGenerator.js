@@ -26,18 +26,72 @@ export class ScheduleGenerator {
   }
 
   generar() {
-    this.paso0_validarVolumen();
-    this.paso1_crearMatrizVacia();
-    
-    let clasesPorAsignar = this.prepararClases();
+    this.paso0_validarVolumen(); // Calculate loads first
+    const warningsBase = [...this.conflictos]; // Guardar advertencias de volumen
 
-    this.paso2_colocarBloquesFijos(clasesPorAsignar);
-    this.paso3_colocarTalleres(clasesPorAsignar);
-    this.paso4_colocarFisicaYQuimica(clasesPorAsignar);
-    this.paso5_colocarRestricciones(clasesPorAsignar);
-    this.paso6_colocarNormales(clasesPorAsignar);
-    this.paso7_optimizarHuecos();
-    this.paso8_calcularCalidad();
+    let mejorHorario = null;
+    let mejorTalleres = null;
+    let mejorDisponibilidadDocente = null;
+    let mejorDisponibilidadEspacio = null;
+    let mejorPuntuacion = -1;
+    let menoresConflictos = null;
+
+    const maxIntentos = 100; // Monte Carlo iterations
+    const clasesBase = this.prepararClases();
+
+    for (let intento = 0; intento < maxIntentos; intento++) {
+      this.paso1_crearMatrizVacia();
+      this.conflictos = [...warningsBase]; // Restaurar advertencias físicas
+      
+      let clasesPorAsignar = clasesBase.map(c => ({...c})); // Clon superficial
+
+      // Mutación aleatoria: alterar un poco el orden y las preferencias
+      clasesPorAsignar.sort((a, b) => {
+        if (!a.grupoId && b.grupoId) return -1;
+        if (a.grupoId && !b.grupoId) return 1;
+        
+        const loadA = this.docenteLoad[a.docenteId] || 0;
+        const loadB = this.docenteLoad[b.docenteId] || 0;
+        const diff = loadB - loadA;
+        
+        // 15% de probabilidad de ignorar MRV para explorar otros caminos
+        if (Math.random() < 0.15) return Math.random() - 0.5;
+        // Empates se deciden al azar
+        if (diff === 0) return Math.random() - 0.5;
+        
+        return diff;
+      });
+
+      const dias = this.config.diasLaborables?.length || 5;
+      clasesPorAsignar.forEach(c => {
+        // Variar el día preferido de inicio aleatoriamente
+        c.diaPreferido = (c.diaPreferido + Math.floor(Math.random() * dias)) % dias;
+      });
+
+      this.paso2_colocarBloquesFijos(clasesPorAsignar);
+      this.paso3_colocarTalleres(clasesPorAsignar);
+      this.paso4_colocarFisicaYQuimica(clasesPorAsignar);
+      this.paso5_colocarRestricciones(clasesPorAsignar);
+      this.paso6_colocarNormales(clasesPorAsignar);
+      this.paso7_optimizarHuecos();
+      this.paso8_calcularCalidad();
+
+      if (this.puntuacion > mejorPuntuacion) {
+        mejorPuntuacion = this.puntuacion;
+        mejorHorario = JSON.parse(JSON.stringify(this.horario));
+        mejorTalleres = JSON.parse(JSON.stringify(this.horarioTalleres));
+        menoresConflictos = [...this.conflictos];
+      }
+
+      // Si no hay conflictos de acomodo, es un horario perfecto
+      const erroresAcomodo = this.conflictos.filter(c => c.mensaje.includes('Imposible acomodar'));
+      if (erroresAcomodo.length === 0) break;
+    }
+
+    this.horario = mejorHorario;
+    this.horarioTalleres = mejorTalleres;
+    this.conflictos = menoresConflictos;
+    this.puntuacion = mejorPuntuacion;
 
     return {
       horario: this.flattenHorario(),
@@ -60,21 +114,24 @@ export class ScheduleGenerator {
       if (a.docenteId) this.docenteLoad[a.docenteId] = (this.docenteLoad[a.docenteId] || 0) + h;
     });
 
-    for (const [gId, horas] of Object.entries(this.grupoLoad)) {
-      if (horas > totalSlots) {
-        const gName = this.grupos.find(g => g.id === gId)?.grado ? `${this.grupos.find(g => g.id === gId).grado}° ${this.grupos.find(g => g.id === gId).grupo}` : gId;
-        this.conflictos.push({
-          mensaje: `⚠️ EL GRUPO ${gName} TIENE ${horas} HORAS ASIGNADAS, PERO LA SEMANA SÓLO TIENE ${totalSlots} ESPACIOS.`
-        });
+    // Solo agregar advertencias una vez (antes del loop de intentos)
+    if (this.conflictos.length === 0) {
+      for (const [gId, horas] of Object.entries(this.grupoLoad)) {
+        if (horas > totalSlots) {
+          const gName = this.grupos.find(g => g.id === gId)?.grado ? `${this.grupos.find(g => g.id === gId).grado}° ${this.grupos.find(g => g.id === gId).grupo}` : gId;
+          this.conflictos.push({
+            mensaje: `⚠️ EL GRUPO ${gName} TIENE ${horas} HORAS ASIGNADAS, PERO LA SEMANA SÓLO TIENE ${totalSlots} ESPACIOS.`
+          });
+        }
       }
-    }
 
-    for (const [dId, horas] of Object.entries(this.docenteLoad)) {
-      if (horas > totalSlots) {
-        const dName = this.docentes.find(d => d.id === dId)?.nombre || dId;
-        this.conflictos.push({
-          mensaje: `⚠️ EL DOCENTE ${dName} TIENE ${horas} HORAS ASIGNADAS EN TOTAL, SUPERANDO LOS ${totalSlots} ESPACIOS DE LA SEMANA.`
-        });
+      for (const [dId, horas] of Object.entries(this.docenteLoad)) {
+        if (horas > totalSlots) {
+          const dName = this.docentes.find(d => d.id === dId)?.nombre || dId;
+          this.conflictos.push({
+            mensaje: `⚠️ EL DOCENTE ${dName} TIENE ${horas} HORAS ASIGNADAS EN TOTAL, SUPERANDO LOS ${totalSlots} ESPACIOS DE LA SEMANA.`
+          });
+        }
       }
     }
   }
@@ -143,7 +200,7 @@ export class ScheduleGenerator {
       
       const loadA = this.docenteLoad[a.docenteId] || 0;
       const loadB = this.docenteLoad[b.docenteId] || 0;
-      return loadB - loadA; // Mayor carga primero
+      return loadB - loadA; // Mayor carga primero (baseline)
     });
     
     return clases;
