@@ -272,6 +272,12 @@ export class ScheduleGenerator {
            : this.grupos;
          const algunGrupoOcupado = gruposAfectados.some(g => this.horario[g.id][d][currentM] !== null);
          if (algunGrupoOcupado) return false;
+         
+         const hayTallerDeOtroGrado = this.horarioTalleres[d][currentM].some(t => 
+           t.gradoTaller && bloque.gradoTaller && Number(t.gradoTaller) !== Number(bloque.gradoTaller)
+         );
+         if (hayTallerDeOtroGrado) return false;
+         
       } else {
          if (this.horario[bloque.grupoId][d][currentM] !== null) return false;
          
