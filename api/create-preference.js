@@ -5,10 +5,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { escuelaId, nombreEscuela, usuarioId, emailDirector } = req.body;
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+  }
+
+  const { escuelaId, nombreEscuela, usuarioId, emailDirector } = body || {};
 
   if (!escuelaId) {
-    return res.status(400).json({ error: 'Missing required field: escuelaId' });
+    return res.status(400).json({ error: 'Missing required field: escuelaId', bodyReceived: body });
   }
 
   const email = emailDirector || 'director@escuela.com'; // fallback if undefined
