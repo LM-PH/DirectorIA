@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import ConfiguracionHorario from './ConfiguracionHorario';
 import CapturaHorarios from './CapturaHorarios';
-import GeneradorPanel from './GeneradorPanel';
 import VistaGeneral from './VistaGeneral';
-import { Settings, Users, Cpu, Calendar } from 'lucide-react';
+import { Settings, Users, Calendar } from 'lucide-react';
 import './Horarios.css';
 
 const HorariosLayout = () => {
@@ -12,8 +11,7 @@ const HorariosLayout = () => {
   const tabs = [
     { id: 'config', name: 'Configuración', icon: Settings },
     { id: 'captura', name: 'Captura de Datos', icon: Users },
-    { id: 'generador', name: 'Motor IA', icon: Cpu },
-    { id: 'vista', name: 'Vista General', icon: Calendar },
+    { id: 'vista', name: 'Editor Visual', icon: Calendar },
   ];
 
   return (
@@ -37,7 +35,6 @@ const HorariosLayout = () => {
       <div className="horarios-content-area">
         {activeTab === 'config' && <ConfiguracionHorario />}
         {activeTab === 'captura' && <CapturaHorarios />}
-        {activeTab === 'generador' && <GeneradorPanel />}
         {activeTab === 'vista' && <VistaGeneral />}
       </div>
     </div>
