@@ -251,6 +251,12 @@ export class ScheduleGenerator {
         }
       }
 
+      // NUEVO: Fase 3 - Reacomodo (Local Search / Swap)
+      // Si el bloque sigue sin asignarse (y es de 1h normal), buscamos si podemos mover otra materia para hacerle espacio
+      if (!asignado && permiteBusquedaLibre && !bloque.isTaller && bloque.duracion === 1) {
+        asignado = this.intentarReacomodo(bloque);
+      }
+
       if (!asignado) {
         const docName = this.docentes.find(doc => doc.id === bloque.docenteId)?.nombre || 'Desconocido';
         const matName = this.materias.find(mat => mat.id === bloque.materiaId)?.nombre || 'Materia';
@@ -349,6 +355,84 @@ export class ScheduleGenerator {
         this.horario[bloque.grupoId][d][currentM] = slotData;
       }
     }
+  }
+
+  removerEn(bloqueInfo, d, startM) {
+    if (bloqueInfo.isTaller) return; // No removemos talleres para no romper sincronía
+    for (let offset = 0; offset < bloqueInfo.duracion; offset++) {
+      const currentM = startM + offset;
+      this.horario[bloqueInfo.grupoId][d][currentM] = null;
+      if (this.disponibilidadDocente[bloqueInfo.docenteId]) {
+        this.disponibilidadDocente[bloqueInfo.docenteId][d][currentM] = true;
+      }
+      if (bloqueInfo.espacioId && this.disponibilidadEspacio[bloqueInfo.espacioId]) {
+        this.disponibilidadEspacio[bloqueInfo.espacioId][d][currentM] = true;
+      }
+    }
+  }
+
+  intentarReacomodo(bloque) {
+    const dias = this.config.diasLaborables?.length || 5;
+    const modulos = this.config.modulosPorDia || 7;
+
+    const espaciosVacios = [];
+    for (let d = 0; d < dias; d++) {
+      for (let m = 0; m < modulos; m++) {
+        if (this.horario[bloque.grupoId][d][m] === null && !this.cruzaReceso(m, 1)) {
+          espaciosVacios.push({ d, m });
+        }
+      }
+    }
+
+    const materiasAsignadas = [];
+    for (let d = 0; d < dias; d++) {
+      for (let m = 0; m < modulos; m++) {
+        const bInfo = this.horario[bloque.grupoId][d][m];
+        if (bInfo !== null && !bInfo.isTaller && bInfo.duracion === 1) {
+          // Recreamos un objeto compatible con cabeEn
+          const infoCompatible = {
+            id: bInfo.bloqueId,
+            docenteId: bInfo.docenteId,
+            materiaId: bInfo.materiaId,
+            grupoId: bloque.grupoId, // Es el mismo
+            espacioId: bInfo.espacioId,
+            isTaller: false,
+            duracion: 1
+          };
+          materiasAsignadas.push({ d, m, info: infoCompatible });
+        }
+      }
+    }
+
+    const shuffledVacios = this.shuffleArray([...espaciosVacios]);
+    const shuffledAsignadas = this.shuffleArray([...materiasAsignadas]);
+
+    for (let ocupado of shuffledAsignadas) {
+      for (let vacio of shuffledVacios) {
+        // Quitamos 'ocupado' temporalmente
+        this.removerEn(ocupado.info, ocupado.d, ocupado.m);
+        
+        // Vemos si cabe en el vacío
+        if (this.cabeEn(ocupado.info, vacio.d, vacio.m)) {
+          this.asignarEn(ocupado.info, vacio.d, vacio.m);
+          
+          // Ahora el lugar de 'ocupado' original está libre. ¿Cabe el nuevo 'bloque'?
+          if (this.cabeEn(bloque, ocupado.d, ocupado.m)) {
+            this.asignarEn(bloque, ocupado.d, ocupado.m);
+            return true; // Éxito!
+          } else {
+            // Deshacemos el movimiento
+            this.removerEn(ocupado.info, vacio.d, vacio.m);
+            this.asignarEn(ocupado.info, ocupado.d, ocupado.m);
+          }
+        } else {
+          // Deshacemos el removido
+          this.asignarEn(ocupado.info, ocupado.d, ocupado.m);
+        }
+      }
+    }
+
+    return false;
   }
 
   validarHorarioFinal() {
