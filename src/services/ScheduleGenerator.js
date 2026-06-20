@@ -191,6 +191,8 @@ export class ScheduleGenerator {
           materiaId: asig.materiaId,
           grupoId: asig.grupoId,
           espacioId: asig.espacioId,
+          isTaller: !asig.grupoId,
+          gradoTaller: asig.gradoTaller || '',
           asignacionOriginal: asig,
           diaPreferido: i % dias
         });
@@ -263,7 +265,8 @@ export class ScheduleGenerator {
                 docenteId: clase.docenteId,
                 materiaId: clase.materiaId,
                 espacioId: clase.espacioId,
-                isTaller: true
+                isTaller: true,
+                gradoTaller: clase.gradoTaller
               });
               asignadaEnGrupo = true;
             }
@@ -291,7 +294,8 @@ export class ScheduleGenerator {
                 docenteId: clase.docenteId,
                 materiaId: clase.materiaId,
                 espacioId: clase.espacioId,
-                isTaller: true
+                isTaller: true,
+                gradoTaller: clase.gradoTaller
               });
               asignada = true;
             }
@@ -309,7 +313,13 @@ export class ScheduleGenerator {
             if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
             if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
             if (this.horario[clase.grupoId][d][m] !== null) continue;
-            if (this.horarioTalleres[d][m].length > 0) continue; // Un grupo no puede tomar clase normal si hay taller general
+            
+            // Un grupo no puede tomar clase normal si hay taller general O un taller de SU grado
+            const claseGroup = this.grupos.find(g => g.id === clase.grupoId);
+            const hayTallerQueAfecta = this.horarioTalleres[d][m].some(t => 
+              !t.gradoTaller || (claseGroup && Number(t.gradoTaller) === Number(claseGroup.grado))
+            );
+            if (hayTallerQueAfecta) continue;
 
             this.disponibilidadDocente[clase.docenteId][d][m] = false;
             if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
@@ -351,7 +361,12 @@ export class ScheduleGenerator {
         // Buscamos un slot libre para el grupo y espacio, pero docente ocupado
         if (this.horario[clase.grupoId][d][m] !== null) continue;
         if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
-        if (this.horarioTalleres[d][m].length > 0) continue;
+        
+        const claseGroup = this.grupos.find(g => g.id === clase.grupoId);
+        const hayTallerQueAfecta = this.horarioTalleres[d][m].some(t => 
+          !t.gradoTaller || (claseGroup && Number(t.gradoTaller) === Number(claseGroup.grado))
+        );
+        if (hayTallerQueAfecta) continue;
         
         if (!this.disponibilidadDocente[clase.docenteId][d][m]) {
           // Identificar qué clase está dando el docente
@@ -372,10 +387,15 @@ export class ScheduleGenerator {
               for (let m2 = 0; m2 < modulos; m2++) {
                 if (d2 === d && m2 === m) continue;
                 
+                const ocupanteGroup = this.grupos.find(g => g.id === grupoOcupanteId);
+                const tallerOcupante = this.horarioTalleres[d2][m2].some(t => 
+                  !t.gradoTaller || (ocupanteGroup && Number(t.gradoTaller) === Number(ocupanteGroup.grado))
+                );
+
                 if (this.horario[grupoOcupanteId][d2][m2] === null &&
                     this.disponibilidadDocente[clase.docenteId][d2][m2] &&
                     (!claseOcupante.espacioId || this.disponibilidadEspacio[claseOcupante.espacioId][d2][m2]) &&
-                    this.horarioTalleres[d2][m2].length === 0) 
+                    !tallerOcupante) 
                 {
                   // Mover ocupante
                   this.horario[grupoOcupanteId][d2][m2] = claseOcupante;

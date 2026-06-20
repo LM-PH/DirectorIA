@@ -412,7 +412,7 @@ const AsignacionesTab = ({ schoolId }) => {
   const [grupos, setGrupos] = useState([]);
   const [espacios, setEspacios] = useState([]);
 
-  const [form, setForm] = useState({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3 });
+  const [form, setForm] = useState({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3, gradoTaller: '' });
   const [editingId, setEditingId] = useState(null);
 
   const load = async () => {
@@ -447,13 +447,16 @@ const AsignacionesTab = ({ schoolId }) => {
       return;
     }
 
+    const finalForm = { ...form };
+    if (finalForm.grupoId !== '') finalForm.gradoTaller = ''; // Clean up if it's not a taller
+
     if (editingId) {
-      await updateAsignacion(schoolId, editingId, form);
+      await updateAsignacion(schoolId, editingId, finalForm);
       setEditingId(null);
     } else {
-      await createAsignacion(schoolId, form);
+      await createAsignacion(schoolId, finalForm);
     }
-    setForm({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3 });
+    setForm({ docenteId: '', materiaId: '', grupoId: '', espacioId: '', horas: 3, gradoTaller: '' });
     load();
   };
 
@@ -463,7 +466,8 @@ const AsignacionesTab = ({ schoolId }) => {
       materiaId: item.materiaId || '',
       grupoId: item.grupoId || '',
       espacioId: item.espacioId || '',
-      horas: item.horas || 3
+      horas: item.horas || 3,
+      gradoTaller: item.gradoTaller || ''
     });
     setEditingId(item.id);
   };
@@ -510,6 +514,15 @@ const AsignacionesTab = ({ schoolId }) => {
             {grupos.map(g => <option key={g.id} value={g.id}>{g.grado}° {g.grupo}</option>)}
           </select>
         </div>
+        {form.grupoId === '' && (
+          <div className="form-group" style={{ flex: 1, minWidth: '100px', marginBottom: 0 }}>
+            <label>Para el Grado (Opcional)</label>
+            <select value={form.gradoTaller} onChange={e=>setForm({...form, gradoTaller: e.target.value})}>
+              <option value="">Todos los grados</option>
+              {[1, 2, 3, 4, 5, 6].map(grado => <option key={grado} value={grado}>{grado}° Grado</option>)}
+            </select>
+          </div>
+        )}
         <div className="form-group" style={{ flex: 1, minWidth: '120px', marginBottom: 0 }}>
           <label>Espacio</label>
           <select value={form.espacioId} onChange={e=>setForm({...form, espacioId: e.target.value})}>
@@ -550,7 +563,7 @@ const AsignacionesTab = ({ schoolId }) => {
             <tr key={item.id}>
               <td style={{ fontWeight: 500 }}>{getName(docentes, item.docenteId)}</td>
               <td>{getName(materias, item.materiaId)}</td>
-              <td><span className={`badge ${item.grupoId ? 'badge-info' : 'badge-warning'}`}>{item.grupoId ? getName(grupos, item.grupoId) : 'Multigrupo (Taller)'}</span></td>
+              <td><span className={`badge ${item.grupoId ? 'badge-info' : 'badge-warning'}`}>{item.grupoId ? getName(grupos, item.grupoId) : (item.gradoTaller ? `Taller (${item.gradoTaller}°) ` : 'Taller (General)')}</span></td>
               <td>{item.espacioId ? getName(espacios, item.espacioId) : <span style={{color:'#94a3b8'}}>-</span>}</td>
               <td>{item.horas} HRS</td>
               <td style={{ textAlign: 'center', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
