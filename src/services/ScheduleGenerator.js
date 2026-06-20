@@ -253,17 +253,15 @@ export class ScheduleGenerator {
       const esPrioritariaManana = matName.includes('matemática') || matName.includes('español');
 
       if (!asignado && permiteBusquedaLibre) {
-        const shuffledDias = this.shuffleArray(Array.from({length: dias}, (_, i) => i));
-        for (let d of shuffledDias) {
+        // Usamos orden secuencial en lugar de aleatorio para empaquetar perfectamente (como piezas de Tetris).
+        // Esto elimina el "Efecto Queso Gruyer" de dejar huecos sueltos que causan cuellos de botella.
+        const ordenDias = Array.from({length: dias}, (_, i) => i);
+        
+        for (let d of ordenDias) {
           if (asignado) break;
           
           let ordenModulos = Array.from({length: modulos - bloque.duracion + 1}, (_, i) => i);
-          if (esPrioritariaManana) {
-            ordenModulos.sort((a, b) => a - b); // Force mornings (early modules)
-          } else {
-            ordenModulos = this.shuffleArray(ordenModulos); // Randomize for the rest
-          }
-
+          
           for (let m of ordenModulos) {
             if (asignado) break;
             if (this.cruzaReceso(m, bloque.duracion)) continue;
