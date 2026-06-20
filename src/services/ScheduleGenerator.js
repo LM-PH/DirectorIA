@@ -102,7 +102,11 @@ export class ScheduleGenerator {
       const nombreMat = mat ? mat.nombre.toLowerCase() : '';
       
       const isTaller = !asig.grupoId || nombreMat.includes('taller') || nombreMat.includes('tecnolog') || nombreMat.includes('tecnología');
-      const isFisicaQuimica = nombreMat.includes('física') || nombreMat.includes('fisica') || nombreMat.includes('química') || nombreMat.includes('quimica');
+      
+      const isFisicaQuimica = 
+        (nombreMat.includes('física') || nombreMat.includes('fisica') || 
+         nombreMat.includes('química') || nombreMat.includes('quimica')) && 
+        !nombreMat.includes('edu');
 
       if (isTaller) {
         // Bloques de 2
