@@ -1,6 +1,7 @@
 .app-container {
   display: flex;
-  height: 100vh;
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Usa dynamic viewport height para móviles */
   overflow: hidden;
   background-color: var(--color-background);
 }
@@ -16,6 +17,7 @@
 .page-container {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Desplazamiento suave en iOS */
   padding: 2rem;
   background-color: var(--color-background);
 }
