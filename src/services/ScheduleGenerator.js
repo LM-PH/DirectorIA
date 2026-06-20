@@ -234,12 +234,22 @@ export class ScheduleGenerator {
       // Permitida si es materia normal, o si el taller aún no ha llenado sus días requeridos
       const permiteBusquedaLibre = !bloque.isTaller || diasEstablecidosTaller < maxDiasTaller;
       
+      const matName = this.materias.find(mat => mat.id === bloque.materiaId)?.nombre?.toLowerCase() || '';
+      const esPrioritariaManana = matName.includes('matemática') || matName.includes('español');
+
       if (!asignado && permiteBusquedaLibre) {
         const shuffledDias = this.shuffleArray(Array.from({length: dias}, (_, i) => i));
         for (let d of shuffledDias) {
           if (asignado) break;
-          const shuffledModulos = this.shuffleArray(Array.from({length: modulos - bloque.duracion + 1}, (_, i) => i));
-          for (let m of shuffledModulos) {
+          
+          let ordenModulos = Array.from({length: modulos - bloque.duracion + 1}, (_, i) => i);
+          if (esPrioritariaManana) {
+            ordenModulos.sort((a, b) => a - b); // Force mornings (early modules)
+          } else {
+            ordenModulos = this.shuffleArray(ordenModulos); // Randomize for the rest
+          }
+
+          for (let m of ordenModulos) {
             if (asignado) break;
             if (this.cruzaReceso(m, bloque.duracion)) continue;
             
@@ -407,6 +417,7 @@ export class ScheduleGenerator {
     const shuffledVacios = this.shuffleArray([...espaciosVacios]);
     const shuffledAsignadas = this.shuffleArray([...materiasAsignadas]);
 
+    // Nivel 1: Reacomodo simple (1 movimiento)
     for (let ocupado of shuffledAsignadas) {
       for (let vacio of shuffledVacios) {
         // Quitamos 'ocupado' temporalmente
@@ -428,6 +439,39 @@ export class ScheduleGenerator {
         } else {
           // Deshacemos el removido
           this.asignarEn(ocupado.info, ocupado.d, ocupado.m);
+        }
+      }
+    }
+
+    // Nivel 2: Reacomodo profundo (2 movimientos en cascada)
+    // Extraordinariamente útil para desatorar cuellos de botella finales.
+    for (let ocupado1 of shuffledAsignadas) {
+      for (let ocupado2 of shuffledAsignadas) {
+        if (ocupado1.info.id === ocupado2.info.id) continue;
+        for (let vacio of shuffledVacios) {
+          // Intentamos: Ocupado1 -> Vacio, Ocupado2 -> Hueco de Ocupado1, Nuevo -> Hueco de Ocupado2
+          this.removerEn(ocupado1.info, ocupado1.d, ocupado1.m);
+          if (this.cabeEn(ocupado1.info, vacio.d, vacio.m)) {
+            this.asignarEn(ocupado1.info, vacio.d, vacio.m);
+            
+            this.removerEn(ocupado2.info, ocupado2.d, ocupado2.m);
+            if (this.cabeEn(ocupado2.info, ocupado1.d, ocupado1.m)) {
+              this.asignarEn(ocupado2.info, ocupado1.d, ocupado1.m);
+              
+              if (this.cabeEn(bloque, ocupado2.d, ocupado2.m)) {
+                this.asignarEn(bloque, ocupado2.d, ocupado2.m);
+                return true; // Éxito profundo!
+              }
+              
+              // Deshacer mov 2
+              this.removerEn(ocupado2.info, ocupado1.d, ocupado1.m);
+            }
+            this.asignarEn(ocupado2.info, ocupado2.d, ocupado2.m);
+            
+            // Deshacer mov 1
+            this.removerEn(ocupado1.info, vacio.d, vacio.m);
+          }
+          this.asignarEn(ocupado1.info, ocupado1.d, ocupado1.m);
         }
       }
     }
