@@ -168,16 +168,16 @@ export class ScheduleGenerator {
       let asignado = false;
 
       // 1. Fase de Empalme (Solo para Talleres)
-      // Buscamos si ya hay un taller DEL MISMO GRADO para sobreponerlo obligatoriamente
+      // Buscamos si ya hay un taller (de cualquier tipo o grado) para intentar usar el mismo bloque escolar
       if (bloque.isTaller) {
         for (let d = 0; d < dias && !asignado; d++) {
           for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
             if (this.cruzaReceso(m, bloque.duracion)) continue;
             
             const talleresAca = this.horarioTalleres[d][m];
-            const hayTallerMismoGrado = talleresAca.some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller));
+            const hayTaller = talleresAca.length > 0;
             
-            if (hayTallerMismoGrado) {
+            if (hayTaller) {
                if (this.cabeEn(bloque, d, m)) {
                  this.asignarEn(bloque, d, m);
                  asignado = true;
