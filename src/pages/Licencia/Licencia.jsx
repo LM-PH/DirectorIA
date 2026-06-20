@@ -12,9 +12,39 @@ const Licencia = () => {
     return <div className="module-container"><div className="loading-state">Cargando información de licencia...</div></div>;
   }
 
-  const handleBuy = () => {
-    // Para futura integración de Mercado Pago
-    alert('Funcionalidad de pago próximamente disponible.');
+  const [isLoadingPayment, setIsLoadingPayment] = React.useState(false);
+
+  const handleBuy = async () => {
+    try {
+      setIsLoadingPayment(true);
+      
+      const response = await fetch('/api/create-preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          escuelaId: licenseData?.escuelaId,
+          nombreEscuela: licenseData?.nombreEscuela,
+          usuarioId: licenseData?.usuarioId,
+          emailDirector: licenseData?.emailDirector
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        console.error('No init_point received', data);
+        alert('Hubo un error al iniciar el pago. Inténtalo de nuevo.');
+        setIsLoadingPayment(false);
+      }
+    } catch (error) {
+      console.error('Error initiating payment:', error);
+      alert('Error de conexión al intentar pagar.');
+      setIsLoadingPayment(false);
+    }
   };
 
   if (isPaid || licenseData?.tipo === 'admin') {
@@ -94,8 +124,8 @@ const Licencia = () => {
               <span className="price-amount">$1,999 MXN</span>
               <span className="price-period">por ciclo escolar</span>
             </div>
-            <button className="btn-primary btn-large" onClick={handleBuy}>
-              <CreditCard size={20} /> Comprar licencia completa
+            <button className="btn-primary btn-large" onClick={handleBuy} disabled={isLoadingPayment}>
+              <CreditCard size={20} /> {isLoadingPayment ? 'Procesando...' : 'Pagar licencia DirectorIA'}
             </button>
           </div>
         </div>

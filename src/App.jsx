@@ -21,6 +21,9 @@ import Configuracion from './pages/Configuracion/Configuracion';
 import HorariosLayout from './pages/Horarios/HorariosLayout';
 import Comisiones from './pages/Comisiones/Comisiones';
 import Licencia from './pages/Licencia/Licencia';
+import PagoExitoso from './pages/Pagos/PagoExitoso';
+import PagoPendiente from './pages/Pagos/PagoPendiente';
+import PagoError from './pages/Pagos/PagoError';
 import PortalDocente from './pages/Portal/PortalDocente';
 import AdminPanel from './pages/Admin/AdminPanel';
 import SubscriptionLock from './pages/Auth/SubscriptionLock';
@@ -61,6 +64,9 @@ function App() {
               <Route path="reportes" element={<Reportes />} />
               <Route path="configuracion" element={<Configuracion />} />
               <Route path="licencia" element={<Licencia />} />
+              <Route path="pago-exitoso" element={<PagoExitoso />} />
+              <Route path="pago-pendiente" element={<PagoPendiente />} />
+              <Route path="pago-error" element={<PagoError />} />
               <Route path="horarios" element={<HorariosLayout />} />
               <Route path="comisiones" element={<Comisiones />} />
             </Route>
