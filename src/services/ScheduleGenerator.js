@@ -36,9 +36,12 @@ export class ScheduleGenerator {
     const cienciasDobles = bloques.filter(b => !b.isTaller && b.duracion === 2);
     
     // Nivel 3: El resto (bloques de 1h de Física/Química, y todas las demás materias)
-    // Ordenar por carga horaria (horas totales) de mayor a menor
+    // Ordenar por: 1) Carga del docente (los más ocupados primero), 2) Carga de la materia
     const resto = bloques.filter(b => !b.isTaller && b.duracion === 1)
                          .sort((a, b) => {
+                           const hdA = this.getHorasDocente(a.docenteId);
+                           const hdB = this.getHorasDocente(b.docenteId);
+                           if (hdB !== hdA) return hdB - hdA;
                            const horasA = parseInt(a.asignacionOriginal?.horas) || 0;
                            const horasB = parseInt(b.asignacionOriginal?.horas) || 0;
                            return horasB - horasA;
@@ -168,6 +171,18 @@ export class ScheduleGenerator {
         if (moduloInicio + i === moduloReceso) return true;
     }
     return false;
+  }
+
+  getHorasDocente(docenteId) {
+    if (!this._horasDocenteCache) this._horasDocenteCache = {};
+    if (this._horasDocenteCache[docenteId] !== undefined) return this._horasDocenteCache[docenteId];
+    
+    let t = 0;
+    this.asignaciones.forEach(a => {
+      if (a.docenteId === docenteId) t += parseInt(a.horas) || 0;
+    });
+    this._horasDocenteCache[docenteId] = t;
+    return t;
   }
 
   getMaxBloquesTaller(grado) {
