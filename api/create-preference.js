@@ -7,9 +7,11 @@ export default async function handler(req, res) {
 
   const { escuelaId, nombreEscuela, usuarioId, emailDirector } = req.body;
 
-  if (!escuelaId || !emailDirector) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  if (!escuelaId) {
+    return res.status(400).json({ error: 'Missing required field: escuelaId' });
   }
+
+  const email = emailDirector || 'director@escuela.com'; // fallback if undefined
 
   try {
     const client = new MercadoPagoConfig({
@@ -33,7 +35,7 @@ export default async function handler(req, res) {
           },
         ],
         payer: {
-          email: emailDirector,
+          email: email,
         },
         back_urls: {
           success: `${appUrl}/pago-exitoso`,

@@ -6,7 +6,7 @@ import './Licencia.css';
 
 const Licencia = () => {
   const { licenseData, isTrialExpired, loading } = useLicense();
-  const { isPaid } = useAuth();
+  const { isPaid, schoolId, currentUser } = useAuth();
 
   if (loading) {
     return <div className="module-container"><div className="loading-state">Cargando información de licencia...</div></div>;
@@ -24,10 +24,10 @@ const Licencia = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          escuelaId: licenseData?.escuelaId,
+          escuelaId: schoolId || currentUser?.uid,
           nombreEscuela: licenseData?.nombreEscuela,
-          usuarioId: licenseData?.usuarioId,
-          emailDirector: licenseData?.emailDirector
+          usuarioId: currentUser?.uid,
+          emailDirector: currentUser?.email
         }),
       });
 
