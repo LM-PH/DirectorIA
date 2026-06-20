@@ -283,7 +283,7 @@ export class ScheduleGenerator {
           if (this.horario[gId][d][m]) {
             res.push({
               grupoId: gId,
-              dia: this.config.diasLaborables?.[parseInt(d)], 
+              dia: (this.config.diasLaborables ? this.config.diasLaborables[parseInt(d)] : parseInt(d) + 1), 
               modulo: parseInt(m),
               ...this.horario[gId][d][m]
             });
@@ -297,7 +297,7 @@ export class ScheduleGenerator {
         this.horarioTalleres[d][m].forEach(taller => {
           res.push({
             grupoId: null, // Indicador de Multigrupo
-            dia: this.config.diasLaborables?.[parseInt(d)],
+            dia: (this.config.diasLaborables ? this.config.diasLaborables[parseInt(d)] : parseInt(d) + 1),
             modulo: parseInt(m),
             ...taller
           });
