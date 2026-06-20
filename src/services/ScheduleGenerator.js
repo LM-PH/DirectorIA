@@ -284,7 +284,10 @@ export class ScheduleGenerator {
               if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
               if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
               
-              const gruposTienenClaseNormal = this.grupos.some(g => this.horario[g.id][d][m] !== null);
+              const gruposAfectados = clase.gradoTaller 
+                ? this.grupos.filter(g => Number(g.grado) === Number(clase.gradoTaller)) 
+                : this.grupos;
+              const gruposTienenClaseNormal = gruposAfectados.some(g => this.horario[g.id][d][m] !== null);
               if (gruposTienenClaseNormal) continue;
               
               this.disponibilidadDocente[clase.docenteId][d][m] = false;
