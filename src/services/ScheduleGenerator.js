@@ -168,14 +168,16 @@ export class ScheduleGenerator {
       let asignado = false;
 
       // 1. Fase de Empalme (Solo para Talleres)
-      // Buscamos si ya hay un taller para intentar sobreponerlo y ahorrar espacio
+      // Buscamos si ya hay un taller DEL MISMO GRADO para sobreponerlo obligatoriamente
       if (bloque.isTaller) {
         for (let d = 0; d < dias && !asignado; d++) {
           for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
             if (this.cruzaReceso(m, bloque.duracion)) continue;
             
-            // Si ya hay un taller en el bloque de inicio, probamos empalmar
-            if (this.horarioTalleres[d][m].length > 0) {
+            const talleresAca = this.horarioTalleres[d][m];
+            const hayTallerMismoGrado = talleresAca.some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller));
+            
+            if (hayTallerMismoGrado) {
                if (this.cabeEn(bloque, d, m)) {
                  this.asignarEn(bloque, d, m);
                  asignado = true;
@@ -219,6 +221,28 @@ export class ScheduleGenerator {
   }
 
   cabeEn(bloque, d, startM) {
+    const modulos = this.config.modulosPorDia || 7;
+    
+    // RESTRICCIÓN: 1 bloque por día de la misma materia para el mismo grupo/grado
+    if (bloque.isTaller) {
+      // Verificar si ya tiene este taller hoy
+      let yaTieneHoy = false;
+      for (let m = 0; m < modulos; m++) {
+        const tiene = this.horarioTalleres[d][m].some(t => 
+          t.materiaId === bloque.materiaId && (!t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))
+        );
+        if (tiene) { yaTieneHoy = true; break; }
+      }
+      if (yaTieneHoy) return false;
+    } else {
+      let yaTieneHoy = false;
+      for (let m = 0; m < modulos; m++) {
+        const c = this.horario[bloque.grupoId][d][m];
+        if (c && c.materiaId === bloque.materiaId) { yaTieneHoy = true; break; }
+      }
+      if (yaTieneHoy) return false;
+    }
+
     for (let offset = 0; offset < bloque.duracion; offset++) {
       const currentM = startM + offset;
       
