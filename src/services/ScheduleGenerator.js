@@ -36,7 +36,13 @@ export class ScheduleGenerator {
     const cienciasDobles = bloques.filter(b => !b.isTaller && b.duracion === 2);
     
     // Nivel 3: El resto (bloques de 1h de Física/Química, y todas las demás materias)
-    const resto = bloques.filter(b => !b.isTaller && b.duracion === 1);
+    // Ordenar por carga horaria (horas totales) de mayor a menor
+    const resto = bloques.filter(b => !b.isTaller && b.duracion === 1)
+                         .sort((a, b) => {
+                           const horasA = parseInt(a.asignacionOriginal?.horas) || 0;
+                           const horasB = parseInt(b.asignacionOriginal?.horas) || 0;
+                           return horasB - horasA;
+                         });
 
     this.colocarBloques(talleres, "Taller/Tecnología");
     this.colocarBloques(cienciasDobles, "Física/Química (Laboratorio)");
