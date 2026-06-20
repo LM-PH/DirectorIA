@@ -267,6 +267,21 @@ export class ScheduleGenerator {
         asignado = this.intentarReacomodo(bloque);
       }
 
+      // NUEVO: Fase 4 - Asignación Forzada (Fuerza Bruta)
+      // Si de verdad es imposible, relajamos la regla de "no repetir materia en el mismo día" como último recurso.
+      if (!asignado && permiteBusquedaLibre) {
+        for (let d = 0; d < dias && !asignado; d++) {
+          for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
+            if (this.cruzaReceso(m, bloque.duracion)) continue;
+            
+            if (this.cabeEn(bloque, d, m, true)) { // true = ignorarYaTieneHoy
+              this.asignarEn(bloque, d, m);
+              asignado = true;
+            }
+          }
+        }
+      }
+
       if (!asignado) {
         const docName = this.docentes.find(doc => doc.id === bloque.docenteId)?.nombre || 'Desconocido';
         const matName = this.materias.find(mat => mat.id === bloque.materiaId)?.nombre || 'Materia';
@@ -286,31 +301,33 @@ export class ScheduleGenerator {
     });
   }
 
-  cabeEn(bloque, d, startM) {
+  cabeEn(bloque, d, startM, ignorarYaTieneHoy = false) {
     const modulos = this.config.modulosPorDia || 7;
     
     // RESTRICCIÓN: 1 bloque por día de la misma materia para el mismo grupo/grado
-    if (bloque.isTaller) {
-      // Verificar si ya tiene este taller hoy EN OTRO HORARIO
-      // (Permitimos que se agrupen en el mismo día SOLO si caen exactamente en el mismo startM)
-      let yaTieneHoyEnOtroHorario = false;
-      for (let m = 0; m < modulos; m++) {
-        // Ignoramos los módulos donde precisamente intentamos colocar este bloque
-        if (m >= startM && m < startM + bloque.duracion) continue;
-        
-        const tiene = this.horarioTalleres[d][m].some(t => 
-          (!t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))
-        );
-        if (tiene) { yaTieneHoyEnOtroHorario = true; break; }
+    if (!ignorarYaTieneHoy) {
+      if (bloque.isTaller) {
+        // Verificar si ya tiene este taller hoy EN OTRO HORARIO
+        // (Permitimos que se agrupen en el mismo día SOLO si caen exactamente en el mismo startM)
+        let yaTieneHoyEnOtroHorario = false;
+        for (let m = 0; m < modulos; m++) {
+          // Ignoramos los módulos donde precisamente intentamos colocar este bloque
+          if (m >= startM && m < startM + bloque.duracion) continue;
+          
+          const tiene = this.horarioTalleres[d][m].some(t => 
+            (!t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))
+          );
+          if (tiene) { yaTieneHoyEnOtroHorario = true; break; }
+        }
+        if (yaTieneHoyEnOtroHorario) return false;
+      } else {
+        let yaTieneHoy = false;
+        for (let m = 0; m < modulos; m++) {
+          const c = this.horario[bloque.grupoId][d][m];
+          if (c && c.materiaId === bloque.materiaId) { yaTieneHoy = true; break; }
+        }
+        if (yaTieneHoy) return false;
       }
-      if (yaTieneHoyEnOtroHorario) return false;
-    } else {
-      let yaTieneHoy = false;
-      for (let m = 0; m < modulos; m++) {
-        const c = this.horario[bloque.grupoId][d][m];
-        if (c && c.materiaId === bloque.materiaId) { yaTieneHoy = true; break; }
-      }
-      if (yaTieneHoy) return false;
     }
 
     for (let offset = 0; offset < bloque.duracion; offset++) {
