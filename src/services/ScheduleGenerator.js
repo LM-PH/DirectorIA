@@ -229,8 +229,12 @@ export class ScheduleGenerator {
       const permiteBusquedaLibre = !bloque.isTaller || diasEstablecidosTaller < maxDiasTaller;
       
       if (!asignado && permiteBusquedaLibre) {
-        for (let d = 0; d < dias && !asignado; d++) {
-          for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
+        const shuffledDias = this.shuffleArray(Array.from({length: dias}, (_, i) => i));
+        for (let d of shuffledDias) {
+          if (asignado) break;
+          const shuffledModulos = this.shuffleArray(Array.from({length: modulos - bloque.duracion + 1}, (_, i) => i));
+          for (let m of shuffledModulos) {
+            if (asignado) break;
             if (this.cruzaReceso(m, bloque.duracion)) continue;
             
             if (this.cabeEn(bloque, d, m)) {
