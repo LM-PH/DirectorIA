@@ -37,12 +37,13 @@ const Licencia = () => {
         window.location.href = data.init_point;
       } else {
         console.error('No init_point received', data);
-        alert('Hubo un error al iniciar el pago. Inténtalo de nuevo.');
+        const errorMessage = data.details || data.error || 'Respuesta inválida del servidor';
+        alert(`Error al iniciar pago: ${errorMessage}`);
         setIsLoadingPayment(false);
       }
     } catch (error) {
       console.error('Error initiating payment:', error);
-      alert('Error de conexión al intentar pagar.');
+      alert(`Error de conexión: ${error.message}`);
       setIsLoadingPayment(false);
     }
   };
