@@ -164,6 +164,20 @@ export class ScheduleGenerator {
     return false;
   }
 
+  getMaxBloquesTaller(grado) {
+    let maxHoras = 0;
+    this.asignaciones.forEach(a => {
+      const nombreMateria = a.nombreMateria?.toLowerCase() || '';
+      const isT = nombreMateria.includes('taller') || nombreMateria.includes('tecnolog') || a.isTaller;
+      const g = a.grupoId ? this.grupos.find(gr => gr.id === a.grupoId)?.grado : a.gradoTaller;
+      if (isT && (!grado || Number(g) === Number(grado))) {
+         const h = parseInt(a.horas) || 0;
+         if (h > maxHoras) maxHoras = h;
+      }
+    });
+    return Math.ceil(maxHoras / 2) || 4; // Por defecto 4 bloques (8 horas) si no encuentra
+  }
+
   colocarBloques(bloques, tipo) {
     const dias = this.config.diasLaborables?.length || 5;
     const modulos = this.config.modulosPorDia || 7;
@@ -173,16 +187,23 @@ export class ScheduleGenerator {
 
       // 1. Fase de Empalme (Solo para Talleres)
       // Buscamos si ya hay un taller DEL MISMO GRADO para sobreponerlo obligatoriamente
+      let diasEstablecidosTaller = 0;
+      let maxDiasTaller = 4;
       let existeTallerGrado = false;
+      
       if (bloque.isTaller) {
-        // Verificar si ya hay algún bloque de taller de este grado colocado en la semana
+        let diasSet = new Set();
+        // Verificar cuántos días distintos ya tienen taller de este grado
         for (let d = 0; d < dias; d++) {
           for (let m = 0; m < modulos; m++) {
             if (this.horarioTalleres[d][m].some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))) {
               existeTallerGrado = true;
+              diasSet.add(d);
             }
           }
         }
+        diasEstablecidosTaller = diasSet.size;
+        maxDiasTaller = this.getMaxBloquesTaller(bloque.gradoTaller);
 
         if (existeTallerGrado) {
           for (let d = 0; d < dias && !asignado; d++) {
@@ -204,8 +225,10 @@ export class ScheduleGenerator {
       }
 
       // 2. Fase de Búsqueda Libre 
-      // Si es materia normal, o si es Taller PERO es el primero de su grado (aún no existeTallerGrado)
-      if (!asignado && (!bloque.isTaller || !existeTallerGrado)) {
+      // Permitida si es materia normal, o si el taller aún no ha llenado sus días requeridos
+      const permiteBusquedaLibre = !bloque.isTaller || diasEstablecidosTaller < maxDiasTaller;
+      
+      if (!asignado && permiteBusquedaLibre) {
         for (let d = 0; d < dias && !asignado; d++) {
           for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
             if (this.cruzaReceso(m, bloque.duracion)) continue;
