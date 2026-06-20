@@ -57,8 +57,8 @@ export class ScheduleGenerator {
   }
 
   paso1_crearMatrizVacia() {
-    const dias = this.config.diasLaborables.length;
-    const modulos = this.config.modulosPorDia;
+    const dias = this.config.diasLaborables?.length || 5;
+    const modulos = this.config.modulosPorDia || 7;
 
     this.grupos.forEach(g => {
       this.horario[g.id] = {};
@@ -161,8 +161,8 @@ export class ScheduleGenerator {
   }
 
   colocarBloques(bloques, tipo) {
-    const dias = this.config.diasLaborables.length;
-    const modulos = this.config.modulosPorDia;
+    const dias = this.config.diasLaborables?.length || 5;
+    const modulos = this.config.modulosPorDia || 7;
 
     bloques.forEach(bloque => {
       let asignado = false;
