@@ -746,6 +746,7 @@ const Comisiones = () => {
                               <option value="administrativo">Administrativo</option>
                               <option value="intendencia">Intendencia</option>
                               <option value="directivo">Directivo</option>
+                              <option value="paae">Personal de apoyo (PAAE)</option>
                               <option value="otro">Otro</option>
                             </select>
                           </div>
@@ -754,6 +755,7 @@ const Comisiones = () => {
                             <select value={newMember.cargo} onChange={e => setNewMember(prev => ({ ...prev, cargo: e.target.value }))}>
                               <option value="responsable">Responsable</option>
                               <option value="secretario">Secretario</option>
+                              <option value="tesorero">Tesorero</option>
                               <option value="integrante">Integrante</option>
                               <option value="apoyo">Apoyo</option>
                             </select>
