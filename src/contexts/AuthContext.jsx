@@ -101,15 +101,12 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, [currentUser]);
 
-  // Lógica de Suscripción y Bloqueo
+  // Lógica de Suscripción y Bloqueo Manual
   const isSuspended = userProfile?.suspendido === true;
   const isPaid = userProfile?.pagado === true;
-  const regTime = userProfile?.fechaRegistro?.toDate?.()?.getTime() || Date.now();
-  // 7 días de prueba (7 * 24 * 60 * 60 * 1000 milisegundos)
-  const trialExpired = !isPaid && (Date.now() - regTime) > 7 * 24 * 60 * 60 * 1000;
   
   // El super-admin está exento de cualquier bloqueo de pago
-  const isAccessBlocked = currentUser?.email !== ADMIN_EMAIL && (isSuspended || trialExpired);
+  const isAccessBlocked = currentUser?.email !== ADMIN_EMAIL && isSuspended;
 
   const value = {
     currentUser,
@@ -117,7 +114,6 @@ export const AuthProvider = ({ children }) => {
     isAdmin: currentUser?.email === ADMIN_EMAIL,
     isPaid,
     isSuspended,
-    trialExpired,
     isAccessBlocked,
     profileLoading,
     userProfile,

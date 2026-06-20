@@ -1,0 +1,135 @@
+.licencia-module {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.alert-banner.error {
+  background-color: #fef2f2;
+  border-left: 4px solid var(--color-error);
+  color: var(--color-error);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+.licencia-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.licencia-card.active-card {
+  align-items: center;
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.licencia-card.active-card h2 {
+  color: var(--color-success);
+  margin-top: 1rem;
+}
+
+.licencia-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1.5rem;
+}
+
+.licencia-card-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: var(--color-text-primary);
+}
+
+.licencia-card-header p {
+  margin: 0;
+}
+
+.icon-primary {
+  color: var(--color-primary);
+}
+
+.icon-error {
+  color: var(--color-error);
+}
+
+.icon-success {
+  color: var(--color-success);
+}
+
+.licencia-details {
+  display: flex;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.detail-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-item strong {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.detail-item span {
+  font-size: 1.1rem;
+  color: var(--color-text-primary);
+}
+
+.licencia-action {
+  margin-top: 1rem;
+  padding-top: 2rem;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.price-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.price-amount {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.price-period {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+}
+
+.btn-large {
+  padding: 1rem 3rem;
+  font-size: 1.1rem;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}

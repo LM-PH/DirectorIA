@@ -2,7 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
+import { LicenseProvider } from './contexts/LicenseContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import LicenseGuard from './components/Auth/LicenseGuard';
 import DashboardLayout from './components/Layout/DashboardLayout';
 
 // Pages
@@ -18,6 +20,7 @@ import Reportes from './pages/Reportes/Reportes';
 import Configuracion from './pages/Configuracion/Configuracion';
 import HorariosLayout from './pages/Horarios/HorariosLayout';
 import Comisiones from './pages/Comisiones/Comisiones';
+import Licencia from './pages/Licencia/Licencia';
 import PortalDocente from './pages/Portal/PortalDocente';
 import AdminPanel from './pages/Admin/AdminPanel';
 import SubscriptionLock from './pages/Auth/SubscriptionLock';
@@ -28,8 +31,9 @@ function App() {
     <AuthProvider>
       <AlertProvider>
         <ConfigProvider>
-          <Router>
-          <Routes>
+          <LicenseProvider>
+            <Router>
+            <Routes>
             {/* Rutas públicas */}
             <Route path="/p/:schoolId" element={<PortalDocente />} />
             <Route path="/admin" element={<AdminPanel />} />
@@ -41,7 +45,9 @@ function App() {
               path="/" 
               element={
                 <ProtectedRoute>
-                  <DashboardLayout />
+                  <LicenseGuard>
+                    <DashboardLayout />
+                  </LicenseGuard>
                 </ProtectedRoute>
               }
             >
@@ -54,11 +60,13 @@ function App() {
               <Route path="bandeja" element={<Bandeja />} />
               <Route path="reportes" element={<Reportes />} />
               <Route path="configuracion" element={<Configuracion />} />
+              <Route path="licencia" element={<Licencia />} />
               <Route path="horarios" element={<HorariosLayout />} />
               <Route path="comisiones" element={<Comisiones />} />
             </Route>
           </Routes>
         </Router>
+        </LicenseProvider>
       </ConfigProvider>
     </AlertProvider>
   </AuthProvider>

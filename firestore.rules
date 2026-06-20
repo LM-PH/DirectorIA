@@ -23,6 +23,16 @@ service cloud.firestore {
       // Solo el director de la escuela correspondiente y el super-admin tienen acceso completo
       allow read, write: if request.auth != null && (request.auth.uid == schoolId || request.auth.token.email == 'zlagustin10@gmail.com');
     }
+    // Reglas para la colección global de licencias
+    match /licencias/{licenciaId} {
+      // Un director puede leer su propia licencia
+      allow read: if request.auth != null && (request.auth.uid == resource.data.escuelaId || request.auth.uid == licenciaId);
+      // Un director puede crear su propia licencia de prueba
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.escuelaId;
+      // Actualizaciones manuales solo por el super-admin
+      allow update: if request.auth != null && request.auth.token.email == 'zlagustin10@gmail.com';
+      allow delete: if request.auth != null && request.auth.token.email == 'zlagustin10@gmail.com';
+    }
     
     // Regla de caída por defecto (fallback) para cualquier otra colección
     match /{document=**} {

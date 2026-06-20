@@ -14,13 +14,17 @@ import {
   Menu,
   X,
   Calendar,
-  ClipboardList
+  ClipboardList,
+  CreditCard,
+  Lock
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLicense } from '../../contexts/LicenseContext';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const { logout } = useAuth();
+  const { logout, isPaid, isAdmin } = useAuth();
+  const { isTrialExpired } = useLicense();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const handleLogout = async () => {
@@ -45,6 +49,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/permisos', name: 'Permisos', icon: <Briefcase size={20} /> },
     { path: '/comisiones', name: 'Comisiones', icon: <ClipboardList size={20} /> },
     { path: '/reportes', name: 'Reportes', icon: <Printer size={20} /> },
+    { path: '/licencia', name: 'Mi Licencia', icon: <CreditCard size={20} /> },
     { path: '/configuracion', name: 'Configuración', icon: <Settings size={20} /> },
   ];
 
@@ -67,19 +72,26 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         <nav className="sidebar-nav">
           <ul>
-            {allItems.map((item) => (
+            {allItems.map((item) => {
+              const isLocked = isTrialExpired && !isPaid && !isAdmin && item.path !== '/licencia' && item.path !== '/configuracion';
+              return (
               <li key={item.path}>
                 <NavLink 
                   to={item.path} 
-                  className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-                  onClick={onClose}
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
+                  onClick={(e) => {
+                    if(isLocked) e.preventDefault();
+                    else onClose();
+                  }}
                   end={item.path === '/'}
                 >
                   <span className="icon">{React.cloneElement(item.icon, { size: 20 })}</span>
                   <span className="text">{item.name}</span>
+                  {isLocked && <Lock size={14} className="lock-icon" style={{marginLeft: 'auto', opacity: 0.5}} />}
                 </NavLink>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </nav>
 

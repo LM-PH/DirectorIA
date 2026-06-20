@@ -257,3 +257,13 @@
     backdrop-filter: blur(2px);
   }
 }
+
+.nav-link.locked, .bottom-nav-item.locked, .drawer-item.locked {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: grayscale(100%);
+}
+.nav-link.locked:hover, .bottom-nav-item.locked:hover, .drawer-item.locked:hover {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
