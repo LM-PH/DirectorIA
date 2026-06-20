@@ -169,26 +169,39 @@ export class ScheduleGenerator {
 
       // 1. Fase de Empalme (Solo para Talleres)
       // Buscamos si ya hay un taller DEL MISMO GRADO para sobreponerlo obligatoriamente
+      let existeTallerGrado = false;
       if (bloque.isTaller) {
-        for (let d = 0; d < dias && !asignado; d++) {
-          for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
-            if (this.cruzaReceso(m, bloque.duracion)) continue;
-            
-            const talleresAca = this.horarioTalleres[d][m];
-            const hayTallerMismoGrado = talleresAca.some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller));
-            
-            if (hayTallerMismoGrado) {
-               if (this.cabeEn(bloque, d, m)) {
-                 this.asignarEn(bloque, d, m);
-                 asignado = true;
-               }
+        // Verificar si ya hay algún bloque de taller de este grado colocado en la semana
+        for (let d = 0; d < dias; d++) {
+          for (let m = 0; m < modulos; m++) {
+            if (this.horarioTalleres[d][m].some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))) {
+              existeTallerGrado = true;
+            }
+          }
+        }
+
+        if (existeTallerGrado) {
+          for (let d = 0; d < dias && !asignado; d++) {
+            for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
+              if (this.cruzaReceso(m, bloque.duracion)) continue;
+              
+              const talleresAca = this.horarioTalleres[d][m];
+              const hayTallerMismoGrado = talleresAca.some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller));
+              
+              if (hayTallerMismoGrado) {
+                 if (this.cabeEn(bloque, d, m)) {
+                   this.asignarEn(bloque, d, m);
+                   asignado = true;
+                 }
+              }
             }
           }
         }
       }
 
-      // 2. Fase de Búsqueda Libre (Si no se empalmó o si es materia normal/ciencias)
-      if (!asignado) {
+      // 2. Fase de Búsqueda Libre 
+      // Si es materia normal, o si es Taller PERO es el primero de su grado (aún no existeTallerGrado)
+      if (!asignado && (!bloque.isTaller || !existeTallerGrado)) {
         for (let d = 0; d < dias && !asignado; d++) {
           for (let m = 0; m <= modulos - bloque.duracion && !asignado; m++) {
             if (this.cruzaReceso(m, bloque.duracion)) continue;
