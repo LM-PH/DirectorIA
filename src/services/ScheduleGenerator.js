@@ -246,27 +246,55 @@ export class ScheduleGenerator {
       }
 
       if (!clase.grupoId) {
-        // TALLER
-        let startD = clase.diaPreferido || 0;
-        for (let offset = 0; offset < dias && !asignada; offset++) {
-          let d = (startD + offset) % dias;
-          for (let m = 0; m < modulos && !asignada; m++) {
-            if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
-            if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
-            
-            const gruposTienenClaseNormal = this.grupos.some(g => this.horario[g.id][d][m] !== null);
-            if (gruposTienenClaseNormal) continue;
-            
-            this.disponibilidadDocente[clase.docenteId][d][m] = false;
-            if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
-            
-            this.horarioTalleres[d][m].push({
-              docenteId: clase.docenteId,
-              materiaId: clase.materiaId,
-              espacioId: clase.espacioId,
-              isTaller: true
-            });
-            asignada = true;
+        // TALLER: Agruparlos intencionalmente
+        let asignadaEnGrupo = false;
+        
+        // 1. Intentar ponerlo en un slot donde YA HAY talleres (para empalmarlos)
+        for (let d = 0; d < dias && !asignadaEnGrupo; d++) {
+          for (let m = 0; m < modulos && !asignadaEnGrupo; m++) {
+            if (this.horarioTalleres[d][m].length > 0) {
+              if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
+              if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
+              
+              this.disponibilidadDocente[clase.docenteId][d][m] = false;
+              if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
+              
+              this.horarioTalleres[d][m].push({
+                docenteId: clase.docenteId,
+                materiaId: clase.materiaId,
+                espacioId: clase.espacioId,
+                isTaller: true
+              });
+              asignadaEnGrupo = true;
+            }
+          }
+        }
+
+        // 2. Si no cupo en un bloque existente (o no hay bloques), buscar un slot libre normal
+        if (asignadaEnGrupo) {
+          asignada = true;
+        } else {
+          let startD = clase.diaPreferido || 0;
+          for (let offset = 0; offset < dias && !asignada; offset++) {
+            let d = (startD + offset) % dias;
+            for (let m = 0; m < modulos && !asignada; m++) {
+              if (!this.disponibilidadDocente[clase.docenteId][d][m]) continue;
+              if (clase.espacioId && !this.disponibilidadEspacio[clase.espacioId][d][m]) continue;
+              
+              const gruposTienenClaseNormal = this.grupos.some(g => this.horario[g.id][d][m] !== null);
+              if (gruposTienenClaseNormal) continue;
+              
+              this.disponibilidadDocente[clase.docenteId][d][m] = false;
+              if (clase.espacioId) this.disponibilidadEspacio[clase.espacioId][d][m] = false;
+              
+              this.horarioTalleres[d][m].push({
+                docenteId: clase.docenteId,
+                materiaId: clase.materiaId,
+                espacioId: clase.espacioId,
+                isTaller: true
+              });
+              asignada = true;
+            }
           }
         }
       } else {
