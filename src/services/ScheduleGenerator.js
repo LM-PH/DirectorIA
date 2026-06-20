@@ -225,15 +225,19 @@ export class ScheduleGenerator {
     
     // RESTRICCIÓN: 1 bloque por día de la misma materia para el mismo grupo/grado
     if (bloque.isTaller) {
-      // Verificar si ya tiene este taller hoy
-      let yaTieneHoy = false;
+      // Verificar si ya tiene este taller hoy EN OTRO HORARIO
+      // (Permitimos que se agrupen en el mismo día SOLO si caen exactamente en el mismo startM)
+      let yaTieneHoyEnOtroHorario = false;
       for (let m = 0; m < modulos; m++) {
+        // Ignoramos los módulos donde precisamente intentamos colocar este bloque
+        if (m >= startM && m < startM + bloque.duracion) continue;
+        
         const tiene = this.horarioTalleres[d][m].some(t => 
-          t.materiaId === bloque.materiaId && (!t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))
+          (!t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))
         );
-        if (tiene) { yaTieneHoy = true; break; }
+        if (tiene) { yaTieneHoyEnOtroHorario = true; break; }
       }
-      if (yaTieneHoy) return false;
+      if (yaTieneHoyEnOtroHorario) return false;
     } else {
       let yaTieneHoy = false;
       for (let m = 0; m < modulos; m++) {
