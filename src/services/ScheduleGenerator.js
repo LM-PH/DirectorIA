@@ -175,9 +175,9 @@ export class ScheduleGenerator {
             if (this.cruzaReceso(m, bloque.duracion)) continue;
             
             const talleresAca = this.horarioTalleres[d][m];
-            const hayTaller = talleresAca.length > 0;
+            const hayTallerMismoGrado = talleresAca.some(t => !t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller));
             
-            if (hayTaller) {
+            if (hayTallerMismoGrado) {
                if (this.cabeEn(bloque, d, m)) {
                  this.asignarEn(bloque, d, m);
                  asignado = true;
@@ -232,7 +232,9 @@ export class ScheduleGenerator {
         // Ignoramos los módulos donde precisamente intentamos colocar este bloque
         if (m >= startM && m < startM + bloque.duracion) continue;
         
-        const tiene = this.horarioTalleres[d][m].length > 0;
+        const tiene = this.horarioTalleres[d][m].some(t => 
+          (!t.gradoTaller || !bloque.gradoTaller || Number(t.gradoTaller) === Number(bloque.gradoTaller))
+        );
         if (tiene) { yaTieneHoyEnOtroHorario = true; break; }
       }
       if (yaTieneHoyEnOtroHorario) return false;

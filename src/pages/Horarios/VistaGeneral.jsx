@@ -250,7 +250,7 @@ const VistaGeneral = () => {
                           Number(h.dia) === Number(dia) && 
                           Number(h.modulo) === Number(mIdx) && 
                           (viewMode === 'grupo' 
-                            ? (h.grupoId === selectedGrupo || (!h.grupoId && h.isTaller))
+                            ? (h.grupoId === selectedGrupo || (!h.grupoId && h.isTaller && (!h.gradoTaller || Number(h.gradoTaller) === Number(selGrp?.grado))))
                             : h.docenteId === selectedDocente)
                         );
 
