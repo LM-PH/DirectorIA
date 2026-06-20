@@ -75,6 +75,18 @@ const VistaGeneral = () => {
   };
 
   const isCellAvailable = (clase, targetDia, targetModulo) => {
+    if (Array.isArray(clase)) {
+      return clase.every(c => {
+        const conflictoDocente = localHorario.some(h => 
+          Number(h.dia) === Number(targetDia) && 
+          Number(h.modulo) === Number(targetModulo) && 
+          h.docenteId === c.docenteId &&
+          h.id !== c.id
+        );
+        return !conflictoDocente;
+      });
+    }
+
     // Verificar si el maestro está ocupado en ese día y módulo
     const conflictoDocente = localHorario.some(h => 
       Number(h.dia) === Number(targetDia) && 
@@ -104,27 +116,31 @@ const VistaGeneral = () => {
     const { clase, source } = draggedItem;
 
     if (!isCellAvailable(clase, targetDia, targetModulo)) {
-      alert('Movimiento Inválido: El docente ya tiene clase en este horario.');
+      alert('Movimiento Inválido: Un docente ya tiene clase en este horario.');
       return;
     }
 
     const newHorario = [...localHorario];
     const newSinAsignar = [...localSinAsignar];
 
-    // Remover del origen
-    if (source === 'banco') {
-      const idx = newSinAsignar.findIndex(c => c.id === clase.id);
-      if (idx > -1) newSinAsignar.splice(idx, 1);
-    } else {
-      const idx = newHorario.findIndex(h => h.id === clase.id);
-      if (idx > -1) newHorario.splice(idx, 1);
-    }
+    const clasesAMover = Array.isArray(clase) ? clase : [clase];
 
-    // Insertar en destino
-    newHorario.push({
-      ...clase,
-      dia: targetDia,
-      modulo: targetModulo
+    clasesAMover.forEach(cMover => {
+      // Remover del origen
+      if (source === 'banco') {
+        const idx = newSinAsignar.findIndex(c => c.id === cMover.id);
+        if (idx > -1) newSinAsignar.splice(idx, 1);
+      } else {
+        const idx = newHorario.findIndex(h => h.id === cMover.id);
+        if (idx > -1) newHorario.splice(idx, 1);
+      }
+
+      // Agregar al destino
+      newHorario.push({
+        ...cMover,
+        dia: targetDia,
+        modulo: targetModulo
+      });
     });
 
     setLocalHorario(newHorario);
@@ -249,6 +265,9 @@ const VistaGeneral = () => {
                           cellBg = isAllowed ? '#dcfce7' : '#fee2e2'; // Green or Red
                         }
 
+                        const normales = slots.filter(s => !s.isTaller);
+                        const talleres = slots.filter(s => s.isTaller);
+
                         return (
                           <td 
                             key={`${dia}-${mIdx}`}
@@ -259,19 +278,35 @@ const VistaGeneral = () => {
                           >
                             {slots.length > 0 ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', height: '100%' }}>
-                                {slots.map((slot, i) => (
+                                {talleres.length > 0 && (
+                                  <div 
+                                    className="timetable-class-card" 
+                                    style={{ height: '100%', minHeight: '60px', borderLeftColor: '#22c55e', cursor: 'grab' }}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, talleres, 'grid')}
+                                  >
+                                    <div className="class-card-subject" style={{ color: '#166534', fontWeight: 'bold' }}>Talleres / Tecnologías</div>
+                                    <div className="schedule-teacher" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                      {Array.from(new Set(talleres.map(t => getMateriaName(t.materiaId)))).join(' • ')}
+                                    </div>
+                                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px' }}>
+                                      {Array.from(new Set(talleres.map(t => getDocenteName(t.docenteId)))).join(' • ')}
+                                    </div>
+                                  </div>
+                                )}
+                                {normales.map((slot, i) => (
                                   <div 
                                     key={i} 
                                     className="timetable-class-card" 
-                                    style={{ height: '100%', minHeight: '60px', borderLeftColor: slot.isTaller ? '#22c55e' : 'var(--color-primary)', cursor: 'grab' }}
+                                    style={{ height: '100%', minHeight: '60px', borderLeftColor: 'var(--color-primary)', cursor: 'grab' }}
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, slot, 'grid')}
                                   >
-                                    <div className="class-card-subject" style={{ color: slot.isTaller ? '#166534' : 'inherit' }}>{getMateriaName(slot.materiaId)}</div>
+                                    <div className="class-card-subject">{getMateriaName(slot.materiaId)}</div>
                                     <div className="schedule-teacher">
                                       {viewMode === 'grupo' 
                                         ? getDocenteName(slot.docenteId) 
-                                        : (slot.grupoId ? `${grupos.find(g=>g.id===slot.grupoId)?.grado}° ${grupos.find(g=>g.id===slot.grupoId)?.grupo}` : 'Taller General')}
+                                        : (slot.grupoId ? `${grupos.find(g=>g.id===slot.grupoId)?.grado}° ${grupos.find(g=>g.id===slot.grupoId)?.grupo}` : '')}
                                     </div>
                                   </div>
                                 ))}
