@@ -130,6 +130,16 @@ const Login = () => {
             </button>
           </div>
         )}
+
+        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+          Al continuar, aceptas nuestros{' '}
+          <span 
+            onClick={() => navigate('/terminos')} 
+            style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Términos y Condiciones
+          </span>
+        </div>
       </div>
     </div>
   );

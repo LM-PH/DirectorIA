@@ -27,6 +27,7 @@ import PagoError from './pages/Pagos/PagoError';
 import PortalDocente from './pages/Portal/PortalDocente';
 import AdminPanel from './pages/Admin/AdminPanel';
 import SubscriptionLock from './pages/Auth/SubscriptionLock';
+import Terminos from './pages/Auth/Terminos';
 import { AlertProvider } from './contexts/AlertContext';
 
 function App() {
@@ -41,8 +42,8 @@ function App() {
             <Route path="/p/:schoolId" element={<PortalDocente />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/locked" element={<SubscriptionLock />} />
-
             <Route path="/login" element={<Login />} />
+            <Route path="/terminos" element={<Terminos />} />
             
             <Route 
               path="/" 
