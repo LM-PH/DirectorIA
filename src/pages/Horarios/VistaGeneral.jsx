@@ -229,10 +229,13 @@ const VistaGeneral = () => {
                     <tr>
                       <td style={{ background: '#f8fafc', textAlign: 'center', fontWeight: 'bold', color: 'var(--color-text-secondary)' }}>Módulo {mIdx + 1}</td>
                       {diasLaborables.map(dia => {
+                        const selGrp = grupos.find(g => g.id === selectedGrupo);
                         const slots = localHorario.filter(h => 
                           Number(h.dia) === Number(dia) && 
                           Number(h.modulo) === Number(mIdx) && 
-                          (viewMode === 'grupo' ? (h.grupoId === selectedGrupo || (!h.grupoId && h.isTaller)) : h.docenteId === selectedDocente)
+                          (viewMode === 'grupo' 
+                            ? (h.grupoId === selectedGrupo || (!h.grupoId && h.isTaller && (!h.gradoTaller || Number(h.gradoTaller) === Number(selGrp?.grado))))
+                            : h.docenteId === selectedDocente)
                         );
 
                         const isOver = dragOverCell === `${dia}-${mIdx}`;
