@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 const AuthContext = createContext({});
@@ -20,21 +20,26 @@ const saveUserProfile = async (user) => {
   if (!user) return;
   try {
     const ref = doc(db, '_admin_users', user.uid);
+    
+    // Solo actualizamos último acceso y datos básicos si ya existe
     await setDoc(ref, {
       uid: user.uid,
       nombre: user.displayName || '',
       email: user.email || '',
       fotoUrl: user.photoURL || '',
       ultimoAcceso: serverTimestamp(),
-    }, { merge: true }); // merge: true preserva campos existentes (pagado, notas, etc.)
-
-    // Primer registro: solo se escribe si no existe aún
-    await setDoc(ref, {
-      fechaRegistro: serverTimestamp(),
-      pagado: false,
-      suspendido: false,
-      notas: '',
     }, { merge: true });
+
+    // Checar si es la primera vez para poner fechaRegistro
+    const docSnap = await getDoc(ref);
+    if (!docSnap.data()?.fechaRegistro) {
+      await setDoc(ref, {
+        fechaRegistro: serverTimestamp(),
+        pagado: false,
+        suspendido: false,
+        notas: '',
+      }, { merge: true });
+    }
   } catch (e) {
     // Silencioso — no interrumpe el flujo de login
     console.warn('Could not save user profile to admin collection:', e.message);
