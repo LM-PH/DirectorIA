@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Printer, FileText, CheckSquare, Users, FolderKanban, Briefcase, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Printer, FileText, CheckSquare, Users, FolderKanban, Briefcase, Calendar as CalendarIcon, Download, BarChart } from 'lucide-react';
 import PrintTemplate from './components/PrintTemplate';
 import './Reportes.css';
 
@@ -13,6 +13,7 @@ import ReportePEMC from './templates/ReportePEMC';
 import ReporteDocumentos from './templates/ReporteDocumentos';
 import ReporteEntregas from './templates/ReporteEntregas';
 import ReporteAgenda from './templates/ReporteAgenda';
+import ReporteGeneral from './templates/ReporteGeneral';
 
 const REPORT_TYPES = [
   { id: 'permisos', title: 'Permisos Económicos', icon: <Briefcase size={24}/>, desc: 'Historial de ausencias autorizadas por mes.', color: 'var(--color-primary)' },
@@ -21,6 +22,7 @@ const REPORT_TYPES = [
   { id: 'documentos', title: 'Documentos Recibidos', icon: <FolderKanban size={24}/>, desc: 'Inventario del archivo digital escolar.', color: 'var(--color-warning)' },
   { id: 'entregas', title: 'Control de Entregas', icon: <FileText size={24}/>, desc: 'Matriz de planeaciones entregadas vs docentes.', color: 'var(--color-error)' },
   { id: 'agenda', title: 'Agenda Mensual', icon: <CalendarIcon size={24}/>, desc: 'Eventos y reuniones programadas.', color: 'var(--color-primary)' },
+  { id: 'general', title: 'Resumen Anual', icon: <BarChart size={24}/>, desc: 'Análisis cuantitativo y cualitativo.', color: '#8B5CF6' },
 ];
 
 const Reportes = () => {
@@ -74,6 +76,24 @@ const Reportes = () => {
         
         const snapDocs = await getDocs(collection(db, base, 'documentos'));
         setExtraData(snapDocs.docs.map(d => ({ id: d.id, ...d.data() })));
+      } else if (reportId === 'general') {
+        // Fetch todo para el resumen
+        const [snapPemc, snapCte, snapPermisos, snapEntregas, snapDocs] = await Promise.all([
+          getDocs(collection(db, base, 'pemc')),
+          getDocs(collection(db, base, 'acuerdos_cte')),
+          getDocs(collection(db, base, 'permisos')),
+          getDocs(collection(db, base, 'entregas_esperadas')),
+          getDocs(collection(db, base, 'documentos'))
+        ]);
+        
+        const allData = {
+          pemc: snapPemc.docs.map(d => ({ id: d.id, ...d.data() })),
+          cte: snapCte.docs.map(d => ({ id: d.id, ...d.data() })),
+          permisos: snapPermisos.docs.map(d => ({ id: d.id, ...d.data() })),
+          entregas: snapEntregas.docs.map(d => ({ id: d.id, ...d.data() })),
+          documentos: snapDocs.docs.map(d => ({ id: d.id, ...d.data() }))
+        };
+        setReportData(allData);
       }
     } catch (e) {
       console.error("Error fetching report data", e);
@@ -137,6 +157,7 @@ const Reportes = () => {
       case 'documentos': return <ReporteDocumentos {...props} />;
       case 'entregas': return <ReporteEntregas {...props} />;
       case 'agenda': return <ReporteAgenda {...props} />;
+      case 'general': return <ReporteGeneral data={reportData} />;
       default: return null;
     }
   };
