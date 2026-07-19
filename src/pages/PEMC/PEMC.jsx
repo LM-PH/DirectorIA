@@ -300,6 +300,7 @@ const PEMC = () => {
                       <span>Responsable: {accion.responsable}</span>
                     </div>
                   </div>
+                </div>
                 ))}
               </div>
             )}
