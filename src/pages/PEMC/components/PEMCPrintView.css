@@ -1,0 +1,155 @@
+.pemc-print-wrapper {
+  background: white;
+  min-height: 100vh;
+  padding: 2rem;
+  color: black;
+}
+
+.print-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.pemc-document {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: "Times New Roman", Times, serif;
+  line-height: 1.5;
+  color: #000;
+}
+
+.doc-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.doc-header h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.doc-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-decoration: underline;
+  margin-bottom: 1rem;
+}
+
+.sub-section {
+  margin-bottom: 1.5rem;
+}
+
+.sub-section h4 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.ambito-print-section {
+  margin-bottom: 3rem;
+}
+
+.ambito-title-bar {
+  background-color: #f0f0f0;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #000;
+  text-align: center;
+}
+
+.accion-print-block {
+  margin-bottom: 2rem;
+}
+
+.print-field {
+  margin-bottom: 0.5rem;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.print-table th,
+.print-table td {
+  border: 1px solid #000;
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.print-table th {
+  background-color: #f9f9f9;
+  font-weight: bold;
+}
+
+.estrategias-block {
+  margin-top: 1.5rem;
+  border: 1px dashed #000;
+  padding: 1rem;
+}
+
+.firmas-section {
+  margin-top: 4rem;
+}
+
+.firmas-grid {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 4rem;
+}
+
+.firma-box {
+  text-align: center;
+  width: 30%;
+}
+
+.firma-line {
+  border-bottom: 1px solid #000;
+  margin-bottom: 0.5rem;
+}
+
+/* Print Specific Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #pemc-print-area, #pemc-print-area * {
+    visibility: visible;
+  }
+  
+  #pemc-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .page-break-before {
+    page-break-before: always;
+  }
+  
+  .ambito-title-bar {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-table th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
