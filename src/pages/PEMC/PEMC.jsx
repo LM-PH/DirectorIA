@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Target, Plus, Clock, Edit2, Trash2, FileText, Printer } from 'lucide-react';
@@ -116,7 +116,6 @@ const PEMC = () => {
     setIsSavingGeneral(true);
     try {
       // Usar setDoc para crear o actualizar (con merge) el doc "general"
-      const { setDoc } = await import('firebase/firestore');
       await setDoc(doc(db, 'schools', schoolId, 'pemc_config', 'general'), generalData, { merge: true });
       alert("Datos generales guardados correctamente");
     } catch (error) {

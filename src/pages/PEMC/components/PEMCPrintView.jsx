@@ -1,12 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ArrowLeft, Printer } from 'lucide-react';
 import './PEMCPrintView.css';
 
 const PEMCPrintView = ({ acciones, generalData, onClose, ambitos }) => {
-  useEffect(() => {
-    // Optionally open print dialog automatically
-    // window.print();
-  }, []);
 
   const renderText = (text) => {
     if (!text) return null;
