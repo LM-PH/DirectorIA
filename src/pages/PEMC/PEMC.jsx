@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Target, Plus, CheckCircle, Clock, AlertTriangle, Edit2, Trash2, FileText, Printer } from 'lucide-react';
+import { Target, Plus, Clock, Edit2, Trash2, FileText, Printer } from 'lucide-react';
 import AccionModal from './components/AccionModal';
 import PEMCGeneralData from './components/PEMCGeneralData';
 import PEMCPrintView from './components/PEMCPrintView';
